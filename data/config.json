@@ -1,0 +1,11 @@
+{
+  "prefix": [
+    "연어봇",
+    ";연"
+  ],
+  "activity": "연어봇 - ;연 도움",
+  "status": "idle",
+  "secureDirWin": "C:/salmonbot/",
+  "secureDirLnx": "$HOME/.salmonbot/",
+  "tokenFileName": "token.txt"
+}
