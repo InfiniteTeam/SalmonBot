@@ -5,13 +5,11 @@
   "secureDirWin": "C:/salmonbot/",
   "secureDirLnx": "$HOME/.salmonbot/",
   "tokenFileName": "token.txt",
-  "color": [
-    {
+  "color": {
       "default": "0xff8040",
       "info": "0x00d8ff",
       "warn": "0xffe400",
       "error": "0xFF0000",
       "ask": "0x5f00ff"
-    }
-  ]
+  }  
 }
