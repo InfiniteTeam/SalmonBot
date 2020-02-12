@@ -20,6 +20,7 @@ elif platform.system() == 'Linux':
 prefix = config['prefix']
 activity = config['activity']
 status = config['status']
+color = int(config['color'], 16)
 
 # ========== 봇 준비 ==========
 client = discord.Client()
@@ -35,7 +36,7 @@ async def on_message(message):
         return
     
     if message.content.startswith(prefix + ' 도움'):
-        embed=discord.Embed(title="연어봇 - 도움", description="추가될 예정입니다.", color=0xff8040)
+        embed=discord.Embed(title="연어봇 - 도움", description="추가될 예정입니다.", color=color['default'])
         await message.channel.send(embed=embed)
         return
 
