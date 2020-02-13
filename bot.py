@@ -11,6 +11,8 @@ import datetime
 # ========== config data import ==========
 with open('./data/config.json', encoding='utf-8') as config_file:
         config = json.load(config_file)
+with open('./data/version.json', encoding='utf-8') as version_file:
+        version = json.load(version_file)
 if platform.system() == 'Windows':
     with open(config['secureDirWin'] + config['tokenFileName']) as token_file:
         token = token_file.readline()
@@ -42,16 +44,16 @@ async def on_message(message):
     else:
         if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type # 메시지를 수신한 곳이 서버인 경우 True, 아니면 False.
         else: serverid_or_type = message.guild.id
-        print(message.channel.id)
-        print(message.guild.id)
-        if message.content == prefix + ' 도움':
-            embed=discord.Embed(title=f"**{botname} - 도움**", description="ff", timestamp=datetime.datetime.utcnow())
+        if message.content == prefix + '도움':
+            embed=discord.Embed(title="전체 명령어 목록", timestamp=datetime.datetime.utcnow())
+            embed.add_field(name="**연어봇**", value="**``연어봇 정보``**: 연어봇의 버전, 개발자 정보 등 확인", inline=True)
             embed.set_author(name=botname, icon_url=boticon)
             embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
             await message.channel.send(embed=embed)
+            log(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
             return
         elif message.content.startswith(prefix):
-            embed=discord.Embed(title="**❌ 존재하지 않는 명령어입니다!**", description="``{} 도움``을 입력해서 전체 명령어를 볼 수 있어요.".format(prefix), timestamp=datetime.datetime.utcnow())
+            embed=discord.Embed(title='**❌ 존재하지 않는 명령어입니다!**', description='``{}도움``을 입력해서 전체 명령어를 볼 수 있어요.'.format(prefix), timestamp=datetime.datetime.utcnow())
             embed.set_author(name=botname, icon_url=boticon)
             embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
             await message.channel.send(embed=embed)
