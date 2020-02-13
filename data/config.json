@@ -1,10 +1,12 @@
 {
+  "botName": "연어봇",
   "prefix": ";연",
   "activity": "연어봇 - ;연 도움",
   "status": "dnd",
   "secureDirWin": "C:/salmonbot/",
   "secureDirLnx": "$HOME/.salmonbot/",
   "tokenFileName": "token.txt",
+  "botIconUrl": "http://salmon.arpa.kro.kr",
   "color": {
       "default": "0xff8040",
       "info": "0x00d8ff",
