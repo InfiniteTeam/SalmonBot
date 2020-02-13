@@ -4,7 +4,7 @@
   "activity": "연어봇 - '도움",
   "status": "dnd",
   "secureDirWin": "C:/salmonbot/",
-  "secureDirLnx": "$HOME/.salmonbot",
+  "secureDirLnx": "$HOME/.salmonbot/",
   "tokenFileName": "token.txt",
   "botIconUrl": "http://salmon.arpa.kro.kr",
   "color": {
