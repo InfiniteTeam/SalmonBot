@@ -25,9 +25,13 @@ prefix = config['prefix']
 activity = config['activity']
 status = config['status']
 boticon = config['botIconUrl']
+thumbnail = config['thumbnailUrl']
 color = config['color']
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
+
+versionNum = version['versionNum']
+versionPrefix = version['versionPrefix']
 
 # ========== prepair bot ==========
 client = discord.Client()
@@ -39,19 +43,25 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.author.bot or message.author == client.user: # 메시지 발신자가 다른 봇이거나 자기 자신인 경우 무시합니다.
+    if message.author.bot or message.author == client.user or message.content == '%': # 메시지 발신자가 다른 봇이거나 자기 자신인 경우, 접두사 뒤 명령어가 없는 경우 무시합니다.
         return
     else:
         if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type # 메시지를 수신한 곳이 서버인 경우 True, 아니면 False.
         else: serverid_or_type = message.guild.id
         if message.content == prefix + '도움':
             embed=discord.Embed(title="전체 명령어 목록", timestamp=datetime.datetime.utcnow())
-            embed.add_field(name="**연어봇**", value="**``연어봇 정보``**: 연어봇의 버전, 개발자 정보 등 확인", inline=True)
+            embed.add_field(name='**연어봇**', value='**``연어봇 정보``**: 연어봇의 버전, 개발자 정보 등 확인', inline=True)
             embed.set_author(name=botname, icon_url=boticon)
             embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
             await message.channel.send(embed=embed)
             log(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
-            return
+        if message.content == prefix + '정보':
+            embed=discord.Embed(title="봇 정보", description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', timestamp=datetime.datetime.utcnow())
+            embed.set_thumbnail(url=thumbnail)
+            embed.set_author(name=botname, icon_url=boticon)
+            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+            await message.channel.send(embed=embed)
+            log(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
         elif message.content.startswith(prefix):
             embed=discord.Embed(title='**❌ 존재하지 않는 명령어입니다!**', description='``{}도움``을 입력해서 전체 명령어를 볼 수 있어요.'.format(prefix), timestamp=datetime.datetime.utcnow())
             embed.set_author(name=botname, icon_url=boticon)
