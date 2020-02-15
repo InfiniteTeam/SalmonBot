@@ -9,28 +9,26 @@ import platform
 import datetime
 
 # ========== config data import ==========
-def dataload():
-    with open('./data/config.json', encoding='utf-8') as config_file:
-        config = json.load(config_file)
-    with open('./data/version.json', encoding='utf-8') as version_file:
-        version = json.load(version_file)
-    if platform.system() == 'Windows': # 시스템 종류에 맞게 중요 데이터 불러옵니다.
-        with open('C:/salmonbot/' + config['tokenFileName']) as token_file:
-            token = token_file.readline()
-        with open('C:/salmonbot/' + config['userdataFileName']) as userdata_file:
-            userdata = json.load(userdata_file)
-        with open('C:/salmonbot/' + config['serverdataFileName']) as serverdata_file:
-            serverdata = json.load(serverdata_file)
-    elif platform.system() == 'Linux':
-        with open('/.salmonbot/' + config['tokenFileName']) as token_file:
-            token = token_file.readline()
-        with open('/.salmonbot/' + config['userdataFileName']) as userdata_file:
-            userdata = json.load(userdata_file)
-        with open('/.salmonbot/' + config['serverdataFileName']) as serverdata_file:
-            serverdata = json.load(serverdata_file)
-    return config, version, token, userdata, serverdata
 
-config, version, token, userdata, serverdata = dataload()
+with open('./data/config.json', encoding='utf-8') as config_file:
+    config = json.load(config_file)
+with open('./data/version.json', encoding='utf-8') as version_file:
+    version = json.load(version_file)
+if platform.system() == 'Windows': # 시스템 종류에 맞게 중요 데이터 불러옵니다.
+    with open('C:/salmonbot/' + config['tokenFileName']) as token_file:
+        token = token_file.readline()
+    with open('C:/salmonbot/' + config['userdataFileName']) as userdata_file:
+        userdata = json.load(userdata_file)
+    with open('C:/salmonbot/' + config['serverdataFileName']) as serverdata_file:
+        serverdata = json.load(serverdata_file)
+elif platform.system() == 'Linux':
+    with open('/.salmonbot/' + config['tokenFileName']) as token_file:
+        token = token_file.readline()
+    with open('/.salmonbot/' + config['userdataFileName']) as userdata_file:
+        userdata = json.load(userdata_file)
+    with open('/.salmonbot/' + config['serverdataFileName']) as serverdata_file:
+        serverdata = json.load(serverdata_file)
+
 botname = config['botName']
 prefix = config['prefix']
 activity = config['activity']
@@ -69,8 +67,49 @@ async def on_message(message):
         await message.channel.send(embed=embed)
         log(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
 
-    # 수신 위치가 서버이고 미등록 서버인 경우
-    if type(serverid_or_type) == int and not message.guild.id in serverdata:
+    elif message.content == prefix + '설치':
+        if type(serverid_or_type) == int:
+            installstr = (
+            f'''**{botname}을 이용할 수 있는 권한을 설정합니다. 20초 안에 다음 옵션 중 하나를 선택하여, 그 번호로 반응해주세요.**
+            1️⃣ 이 서버의 멤버 누구나 허용
+            2️⃣ 역할이 부여된 멤버만 허용
+            3️⃣ 특정 역할만 허용
+            4️⃣ 관리자 권한이 있는 역할만 허용
+            ❌ 설치 취소 (언제든 다시 설치 가능)''')
+            embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['ask'], timestamp=datetime.datetime.utcnow())
+            embed.set_author(name=f'{botname} - 설치 1/4 단계', icon_url=boticon)
+            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+            msg = await message.channel.send(embed=embed)
+            await msg.add_reaction('1️⃣')
+            await msg.add_reaction('2️⃣')
+            await msg.add_reaction('3️⃣')
+            await msg.add_reaction('4️⃣')
+            await msg.add_reaction('❌')
+            log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
+            def check(reaction, user):
+                return user == message.author and str(reaction.emoji) in ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '❌']
+            try:
+                reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=check)
+            except asyncio.TimeoutError:
+                embed=discord.Embed(title='**🕒 시간이 초과되었습니다!**', description=f'{prefix}설치 명령을 통해 다시 설치할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+                embed.set_author(name=botname, icon_url=boticon)
+                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                await message.channel.send(embed=embed)
+                log(message.author.id, message.channel.id, message.content, '[설치 시간 초과]', fwhere_server=serverid_or_type)
+            else:
+                if reaction == '❌':
+                    message.channel.send('설치가 취소되었습니다. 언제든 다시 설치 가능합니다.')
+        else:
+            embed=discord.Embed(title='**❌ DM 또는 그룹 메시지에서는 사용할 수 없는 명령어입니다!**', description='이 명령어는 서버에서만 사용할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+            embed.set_author(name=botname, icon_url=boticon)
+            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+            await message.channel.send(embed=embed)
+            log(message.author.id, message.channel.id, message.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=serverid_or_type)
+
+        return
+
+    # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
+    if message.content.startswith(prefix) and type(serverid_or_type) == int and not message.guild.id in serverdata:
         embed=discord.Embed(title='🚫미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}설치`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         embed.set_author(name=botname, icon_url=boticon)
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -78,19 +117,7 @@ async def on_message(message):
         log(message.author.id, message.channel.id, message.content, '[미등록 서버]', fwhere_server=serverid_or_type)
         return
 
-    if message.content == prefix + '설치':
-        installstr = (f'''**{botname}을 이용할 수 있는 권한을 설정합니다. 다음 옵션 중 하나를 선택하여, 그 번호로 반응해주세요.**
-        1️⃣ 이 서버의 멤버 누구나 허용
-        2️⃣ 역할이 부여된 멤버만 허용
-        3️⃣ 특정 역할만 허용
-        4️⃣ 관리자 권한이 있는 역할만 허용''')
-        embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['error'], timestamp=datetime.datetime.utcnow())
-        embed.set_author(name=f'{botname} - 설치', icon_url=boticon)
-        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-        await message.channel.send(embed=embed)
-        log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
-
-    elif message.content == prefix + '정보':
+    if message.content == prefix + '정보':
         embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['info'], timestamp=datetime.datetime.utcnow())
         embed.set_thumbnail(url=thumbnail)
         embed.set_author(name=botname, icon_url=boticon)
