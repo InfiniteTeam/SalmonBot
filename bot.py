@@ -9,16 +9,19 @@ import platform
 import datetime
 
 # ========== config data import ==========
-with open('./data/config.json', encoding='utf-8') as config_file:
+def dataload():
+    with open('./data/config.json', encoding='utf-8') as config_file:
         config = json.load(config_file)
-with open('./data/version.json', encoding='utf-8') as version_file:
+    with open('./data/version.json', encoding='utf-8') as version_file:
         version = json.load(version_file)
-if platform.system() == 'Windows':
-    with open(config['secureDirWin'] + config['tokenFileName']) as token_file:
-        token = token_file.readline()
-elif platform.system() == 'Linux':
-    with open(config['secureDirLnx'] + config['tokenFileName']) as token_file:
-        token = token_file.readline()
+    with open('/data/userdata.json', encoding='utf-8') as userdata_file:
+        userdata = json.load(userdata_file)
+    if platform.system() == 'Windows':
+        with open(config['secureDirWin'] + config['tokenFileName']) as token_file:
+            token = token_file.readline()
+    elif platform.system() == 'Linux':
+        with open(config['secureDirLnx'] + config['tokenFileName']) as token_file:
+            token = token_file.readline()
 
 botname = config['botName']
 prefix = config['prefix']
@@ -66,7 +69,7 @@ async def on_message(message):
             log(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
 
         elif message.content == prefix + '설정':
-
+            
 
         elif message.content.startswith(prefix):
             embed=discord.Embed(title='**❌ 존재하지 않는 명령어입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['default'], timestamp=datetime.datetime.utcnow())
