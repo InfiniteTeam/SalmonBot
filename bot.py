@@ -53,7 +53,15 @@ async def on_ready():
 
 @tasks.loop(seconds=30)
 async def latency():
-    print(client.latency)
+    global ping, pinglevel
+    ping = round(1000 * client.latency)
+    if ping <= 100: pinglevel = '🔵 매우좋음'
+    elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
+    elif ping > 250 and ping <= 400: pinglevel = '🟡 보통'
+    elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
+    elif ping > 550: pinglevel = '⚫ 매우나쁨'
+
+    print('LATENCY:', ping, pinglevel.split(' ')[1])
 
 @client.event
 async def on_message(message):
@@ -74,23 +82,25 @@ async def on_message(message):
 
     elif message.content == prefix + '설치':
         if type(serverid_or_type) == int:
-            if has_perm(message.author, 'administrator') == True:
-                installstr = (
-                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 `#`을 사용하여 채널을 입력해주세요.
-                ❌ 로 반응하여 설치를 취소할 수 있고 ⏩ 로 반응하여 건너뛸 수 있습니다.**
-                
-                ❌ 설치 취소 (언제든 다시 설치 가능)''')
-                embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['ask'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=f'{botname} - 설치 1/4 단계', icon_url=boticon)
+            if has_perm(message.author, 'administrator'):
+                installstr1 = (
+                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 선택해주세요.
+                ❌ 설치 취소
+                ⏩ 건너뛰기(맨 위의 채널로 설정)
+                ✏ 채널 입력하기**''')
+                embed=discord.Embed(title=f'**1단계: {botname} 공지 채널 설정**', description=installstr1, color=color['ask'], timestamp=datetime.datetime.utcnow())
+                embed.set_author(name=f'{botname} - 설치 1/1 단계', icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(f'<@{message.author.id}>')
                 msg = await message.channel.send(embed=embed)
                 await msg.add_reaction('❌')
+                await msg.add_reaction('⏩')
+                await msg.add_reaction('✏')
                 log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
-                def check(reaction, user):
-                    return user == message.author and str(reaction.emoji) == '❌'
+                def checkrc(reaction, user):
+                    return user == message.author and str(reaction.emoji) in ['❌', '⏩', '✏']
                 try:
-                    reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=check)
+                    reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=checkrc)
                 except asyncio.TimeoutError:
                     embed=discord.Embed(title='**🕒 시간이 초과되었습니다!**', description=f'`{prefix}설치` 명령을 통해 다시 설치할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
                     embed.set_author(name=botname, icon_url=boticon)
@@ -101,6 +111,14 @@ async def on_message(message):
                     if reaction.emoji == '❌':
                         await message.channel.send('설치가 취소되었습니다. 언제든 다시 설치 가능합니다.')
                         log(message.author.id, message.channel.id, message.content, '[설치가 취소됨]]', fwhere_server=serverid_or_type)
+                    elif reaction.emoji == '⏩':
+                        await message.channel.send(f'설치가 완료되었습니다. 이제 {botname}의 기능을 이용해보세요! `{prefix}`도움 을 입력하여 전체 명령을 볼 수 있어요.')
+                    elif reaction.emoji == '✏':
+                        await message.channel.send('이제 `#`을 사용하여 채널을 입력해주세요.')
+                        def checkmsg(m):
+                            return m.channel == message.channel
+                        msg2 = await client.wait_for(('message'), timeout=20.0, check=checkmsg)
+                        installmention = msg2.channel_mentions
             else:
                 await message.channel.send(embed=setembed_donthaveperm(message, '관리자'))
                 log(message.author.id, message.channel.id, message.content, '[권한이 부족합니다!]', fwhere_server=serverid_or_type)
@@ -112,7 +130,7 @@ async def on_message(message):
 
     # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
     if message.content.startswith(prefix) and type(serverid_or_type) == int and not message.guild.id in serverdata:
-        embed=discord.Embed(title='🚫미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}설치`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+        embed=discord.Embed(title='⏰미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}설치`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         embed.set_author(name=botname, icon_url=boticon)
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
         await message.channel.send(embed=embed)
@@ -131,7 +149,11 @@ async def on_message(message):
         pass
 
     elif message.content == prefix + '핑':
-        print(client.latency)
+        embed=discord.Embed(title='🏓 퐁!', description=f'**현재 지연시간: {ping}ms - {pinglevel}**\n지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+        embed.set_author(name=botname, icon_url=boticon)
+        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+        await message.channel.send(embed=embed)
+        log(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
 
     elif message.content.startswith(prefix):
         embed=discord.Embed(title='**❌ 존재하지 않는 명령어입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
