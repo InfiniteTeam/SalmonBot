@@ -48,7 +48,12 @@ client = discord.Client()
 @client.event
 async def on_ready():
     print('Logged in as{}'.format(client.user))
+    latency.start()
     await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다. 
+
+@tasks.loop(seconds=30)
+async def latency():
+    print(client.latency)
 
 @client.event
 async def on_message(message):
@@ -71,12 +76,13 @@ async def on_message(message):
         if type(serverid_or_type) == int:
             if has_perm(message.author, 'administrator') == True:
                 installstr = (
-                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 `#`을 사용하여 채널을 선택해주세요. ❌ 로 반응하여 설치를 취소할 수 있습니다.**
+                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 `#`을 사용하여 채널을 입력해주세요.
+                ❌ 로 반응하여 설치를 취소할 수 있고 ⏩ 로 반응하여 건너뛸 수 있습니다.**
+                
                 ❌ 설치 취소 (언제든 다시 설치 가능)''')
                 embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['ask'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=f'{botname} - 설치 1/4 단계', icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                #await message.channel.send(f'<@{message.author.id}>')
                 await message.channel.send(f'<@{message.author.id}>')
                 msg = await message.channel.send(embed=embed)
                 await msg.add_reaction('❌')
@@ -123,6 +129,9 @@ async def on_message(message):
 
     elif message.content == prefix + '설정':
         pass
+
+    elif message.content == prefix + '핑':
+        print(client.latency)
 
     elif message.content.startswith(prefix):
         embed=discord.Embed(title='**❌ 존재하지 않는 명령어입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
