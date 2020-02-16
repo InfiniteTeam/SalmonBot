@@ -1,7 +1,7 @@
 # -*-coding: utf-8-*-
 
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 import asyncio
 import json
 import time
@@ -69,41 +69,37 @@ async def on_message(message):
 
     elif message.content == prefix + '설치':
         if type(serverid_or_type) == int:
-            installstr = (
-            f'''**{botname}을 이용할 수 있는 권한을 설정합니다. 20초 안에 다음 옵션 중 하나를 선택하여, 그 번호로 반응해주세요.**
-            1️⃣ 이 서버의 멤버 누구나 허용
-            2️⃣ 역할이 부여된 멤버만 허용
-            3️⃣ 특정 역할만 허용
-            4️⃣ 관리자 권한이 있는 역할만 허용
-            ❌ 설치 취소 (언제든 다시 설치 가능)''')
-            embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['ask'], timestamp=datetime.datetime.utcnow())
-            embed.set_author(name=f'{botname} - 설치 1/4 단계', icon_url=boticon)
-            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-            msg = await message.channel.send(embed=embed)
-            await msg.add_reaction('1️⃣')
-            await msg.add_reaction('2️⃣')
-            await msg.add_reaction('3️⃣')
-            await msg.add_reaction('4️⃣')
-            await msg.add_reaction('❌')
-            log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
-            def check(reaction, user):
-                return user == message.author and str(reaction.emoji) in ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '❌']
-            try:
-                reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=check)
-            except asyncio.TimeoutError:
-                embed=discord.Embed(title='**🕒 시간이 초과되었습니다!**', description=f'{prefix}설치 명령을 통해 다시 설치할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=botname, icon_url=boticon)
+            if has_perm(message.author, 'administrator') == True:
+                installstr = (
+                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 `#`을 사용하여 채널을 선택해주세요. ❌ 로 반응하여 설치를 취소할 수 있습니다.**
+                ❌ 설치 취소 (언제든 다시 설치 가능)''')
+                embed=discord.Embed(title=f'**1단계: {botname} 이용 권한 설정**', description=installstr, color=color['ask'], timestamp=datetime.datetime.utcnow())
+                embed.set_author(name=f'{botname} - 설치 1/4 단계', icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                await message.channel.send(embed=embed)
-                log(message.author.id, message.channel.id, message.content, '[설치 시간 초과]', fwhere_server=serverid_or_type)
+                #await message.channel.send(f'<@{message.author.id}>')
+                await message.channel.send(f'<@{message.author.id}>')
+                msg = await message.channel.send(embed=embed)
+                await msg.add_reaction('❌')
+                log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
+                def check(reaction, user):
+                    return user == message.author and str(reaction.emoji) == '❌'
+                try:
+                    reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=check)
+                except asyncio.TimeoutError:
+                    embed=discord.Embed(title='**🕒 시간이 초과되었습니다!**', description=f'`{prefix}설치` 명령을 통해 다시 설치할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+                    embed.set_author(name=botname, icon_url=boticon)
+                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                    await message.channel.send(embed=embed)
+                    log(message.author.id, message.channel.id, message.content, '[설치 시간 초과]', fwhere_server=serverid_or_type)
+                else:
+                    if reaction.emoji == '❌':
+                        await message.channel.send('설치가 취소되었습니다. 언제든 다시 설치 가능합니다.')
+                        log(message.author.id, message.channel.id, message.content, '[설치가 취소됨]]', fwhere_server=serverid_or_type)
             else:
-                if reaction == '❌':
-                    message.channel.send('설치가 취소되었습니다. 언제든 다시 설치 가능합니다.')
+                await message.channel.send(embed=setembed_donthaveperm(message, '관리자'))
+                log(message.author.id, message.channel.id, message.content, '[권한이 부족합니다!]', fwhere_server=serverid_or_type)
         else:
-            embed=discord.Embed(title='**❌ DM 또는 그룹 메시지에서는 사용할 수 없는 명령어입니다!**', description='이 명령어는 서버에서만 사용할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
-            embed.set_author(name=botname, icon_url=boticon)
-            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-            await message.channel.send(embed=embed)
+            await message.channel.send(embed=setembed_onlyserver(message))
             log(message.author.id, message.channel.id, message.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=serverid_or_type)
 
         return
@@ -134,6 +130,26 @@ async def on_message(message):
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
         await message.channel.send(embed=embed)
         log(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어입니다!]', fwhere_server=serverid_or_type)
+
+#  멤버의 역할에 권한이 있는지 확인합니다.
+def has_perm(member, perm):
+    roles = member.roles
+    for x in roles:
+        if eval(f'x.permissions.{perm}'):
+            return True
+    return False
+
+def setembed_onlyserver(message):
+    embed=discord.Embed(title='**❌ DM 또는 그룹 메시지에서는 사용할 수 없는 명령어입니다!**', description='이 명령어는 서버에서만 사용할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    embed.set_author(name=botname, icon_url=boticon)
+    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+    return embed
+
+def setembed_donthaveperm(message, permname):
+    embed=discord.Embed(title='**🛑 권한이 없습니다!**', description=f'이 명령어는 `{permname}` 권한이 있는 멤버 또는 개발자만 사용 가능합니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    embed.set_author(name=botname, icon_url=boticon)
+    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+    return embed
 
 # 로그 출력기 - 
 # 함수 인자: fwho: 수신자, fwhere_channel: 수신 채널 아이디, freceived: 수신한 메시지 내용, fsent: 발신한 메시지 요약, fetc: 기타 기록, fwhere_server: 수신 서버 아이디
