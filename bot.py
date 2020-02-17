@@ -78,9 +78,11 @@ async def on_message(message):
             log(message.author.id, message.channel.id, message.content, '[이미 등록된 사용자]', fwhere_server=serverid_or_type)
         else:
             await message.channel.send(f'<@{message.author.id}>')
-            embed = discord.Embed(title='약관', description='추가예정\n동의하시면 20초 안에 `동의`를 입력해주세요.', color=color['ask'], timestamp=datetime.datetime.utcnow())
+            embed = discord.Embed(title='약관', description='연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.', color=color['ask'], timestamp=datetime.datetime.utcnow())
+            embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+            embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
             await message.channel.send(embed=embed)
-            log(message.author.id, message.channel.id, message.content, '[약관]', fwhere_server=serverid_or_type)
+            log(message.author.id, message.channel.id, message.content, '[이용약관 및 개인정보 취급방침의 동의]', fwhere_server=serverid_or_type)
             def check(m):
                 return m.channel == message.channel and m.author == message.author
             try:
