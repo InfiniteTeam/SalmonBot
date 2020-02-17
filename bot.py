@@ -15,18 +15,18 @@ with open('./data/config.json', encoding='utf-8') as config_file:
 with open('./data/version.json', encoding='utf-8') as version_file:
     version = json.load(version_file)
 if platform.system() == 'Windows': # 시스템 종류에 맞게 중요 데이터 불러옵니다.
-    with open('C:/salmonbot/' + config['tokenFileName']) as token_file:
+    with open('C:/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
         token = token_file.readline()
-    with open('C:/salmonbot/' + config['userdataFileName']) as userdata_file:
+    with open('C:/salmonbot/' + config['userdataFileName'], encoding='utf-8') as userdata_file:
         userdata = json.load(userdata_file)
-    with open('C:/salmonbot/' + config['serverdataFileName']) as serverdata_file:
+    with open('C:/salmonbot/' + config['serverdataFileName'], encoding='utf-8') as serverdata_file:
         serverdata = json.load(serverdata_file)
 elif platform.system() == 'Linux':
-    with open('/.salmonbot/' + config['tokenFileName']) as token_file:
+    with open('/.salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
         token = token_file.readline()
-    with open('/.salmonbot/' + config['userdataFileName']) as userdata_file:
+    with open('/.salmonbot/' + config['userdataFileName'], encoding='utf-8') as userdata_file:
         userdata = json.load(userdata_file)
-    with open('/.salmonbot/' + config['serverdataFileName']) as serverdata_file:
+    with open('/.salmonbot/' + config['serverdataFileName'], encoding='utf-8') as serverdata_file:
         serverdata = json.load(serverdata_file)
 
 botname = config['botName']
@@ -72,64 +72,44 @@ async def on_message(message):
     if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type
     else: serverid_or_type = message.guild.id
 
-    if message.content == prefix + '도움':
-        embed=discord.Embed(title='전체 명령어 목록', color=color['default'], timestamp=datetime.datetime.utcnow())
-        embed.add_field(name='**연어봇**', value=f'**`{prefix}정보`**: {botname}의 버전, 개발자 정보 등 확인', inline=True)
+    if message.content == prefix + '등록':
+        if str(message.author.id) in userdata:
+            await message.channel.send(f'<@{message.author.id}> 이미 등록되어 있어요!')
+            log(message.author.id, message.channel.id, message.content, '[이미 등록된 사용자]', fwhere_server=serverid_or_type)
+        else:
+            await message.channel.send(f'<@{message.author.id}>')
+            embed = discord.Embed(title='약관', description='추가예정\n동의하시면 20초 안에 `동의`를 입력해주세요.', color=color['ask'], timestamp=datetime.datetime.utcnow())
+            await message.channel.send(embed=embed)
+            log(message.author.id, message.channel.id, message.content, '[약관]', fwhere_server=serverid_or_type)
+            def check(m):
+                return m.channel == message.channel and m.author == message.author
+            try:
+                msg = await client.wait_for(('message'), timeout=20.0, check=check)
+            except asyncio.TimeoutError:
+                await message.channel.send('시간이 초과되었습니다.')
+            else:
+                if msg.content == '동의':
+                    today = datetime.datetime.today()
+                    userdata[str(message.author.id)] = {'level': 1, 'type': 'User', 'date': f'{today.year}-{today.month}-{today.day}'}
+                    savedata(user=userdata)
+                    await message.channel.send(f'등록되었습니다. `{prefix}도움` 을 입력해서 전체 명령어를 볼 수 있습니다.')
+                    log(message.author.id, message.channel.id, msg.content, '[약관]', fwhere_server=serverid_or_type)
+                else:
+                    await message.channel.send('취소되었습니다. 다시 시도해 주세요.')
+                
+        return
+
+    # 등록되지 않은 유저일 경우
+    if message.content.startswith(prefix) and not str(message.author.id) in userdata:
+        embed=discord.Embed(title='❔ 미등록 사용자', description=f'**등록되어 있지 않은 사용자입니다!**\n`{prefix}등록`명령을 입력해서, 약관에 동의해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         embed.set_author(name=botname, icon_url=boticon)
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
         await message.channel.send(embed=embed)
-        log(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
-
-    elif message.content == prefix + '설치':
-        if type(serverid_or_type) == int:
-            if has_perm(message.author, 'administrator'):
-                installstr1 = (
-                f'''**{botname}에서 공지를 받을 채널을 설정합니다. 20초 안에 선택해주세요.
-                ❌ 설치 취소
-                ⏩ 건너뛰기(맨 위의 채널로 설정)
-                ✏ 채널 입력하기**''')
-                embed=discord.Embed(title=f'**1단계: {botname} 공지 채널 설정**', description=installstr1, color=color['ask'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=f'{botname} - 설치 1/1 단계', icon_url=boticon)
-                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                await message.channel.send(f'<@{message.author.id}>')
-                msg = await message.channel.send(embed=embed)
-                await msg.add_reaction('❌')
-                await msg.add_reaction('⏩')
-                await msg.add_reaction('✏')
-                log(message.author.id, message.channel.id, message.content, '[설치 1단계]', fwhere_server=serverid_or_type)
-                def checkrc(reaction, user):
-                    return user == message.author and str(reaction.emoji) in ['❌', '⏩', '✏']
-                try:
-                    reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=checkrc)
-                except asyncio.TimeoutError:
-                    embed=discord.Embed(title='**🕒 시간이 초과되었습니다!**', description=f'`{prefix}설치` 명령을 통해 다시 설치할 수 있습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
-                    embed.set_author(name=botname, icon_url=boticon)
-                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                    await message.channel.send(embed=embed)
-                    log(message.author.id, message.channel.id, message.content, '[설치 시간 초과]', fwhere_server=serverid_or_type)
-                else:
-                    if reaction.emoji == '❌':
-                        await message.channel.send('설치가 취소되었습니다. 언제든 다시 설치 가능합니다.')
-                        log(message.author.id, message.channel.id, message.content, '[설치가 취소됨]]', fwhere_server=serverid_or_type)
-                    elif reaction.emoji == '⏩':
-                        await message.channel.send(f'설치가 완료되었습니다. 이제 {botname}의 기능을 이용해보세요! `{prefix}`도움 을 입력하여 전체 명령을 볼 수 있어요.')
-                    elif reaction.emoji == '✏':
-                        await message.channel.send('이제 `#`을 사용하여 채널을 입력해주세요.')
-                        def checkmsg(m):
-                            return m.channel == message.channel
-                        msg2 = await client.wait_for(('message'), timeout=20.0, check=checkmsg)
-                        installmention = msg2.channel_mentions
-            else:
-                await message.channel.send(embed=setembed_donthaveperm(message, '관리자'))
-                log(message.author.id, message.channel.id, message.content, '[권한이 부족합니다!]', fwhere_server=serverid_or_type)
-        else:
-            await message.channel.send(embed=setembed_onlyserver(message))
-            log(message.author.id, message.channel.id, message.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=serverid_or_type)
-
+        log(message.author.id, message.channel.id, message.content, '[미등록 사용자]', fwhere_server=serverid_or_type)
         return
 
     # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
-    if message.content.startswith(prefix) and type(serverid_or_type) == int and not message.guild.id in serverdata:
+    if message.content.startswith(prefix) and type(serverid_or_type) == int and not str(message.guild.id) in serverdata:
         embed=discord.Embed(title='⏰미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}설치`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         embed.set_author(name=botname, icon_url=boticon)
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -137,7 +117,18 @@ async def on_message(message):
         log(message.author.id, message.channel.id, message.content, '[미등록 서버]', fwhere_server=serverid_or_type)
         return
 
-    if message.content == prefix + '정보':
+    elif message.content == prefix + '탈퇴':
+        pass
+
+    elif message.content == prefix + '도움':
+        embed=discord.Embed(title='전체 명령어 목록', color=color['default'], timestamp=datetime.datetime.utcnow())
+        embed.add_field(name='**연어봇**', value=f'**`{prefix}정보`**: {botname}의 버전, 개발자 정보 등 확인', inline=True)
+        embed.set_author(name=botname, icon_url=boticon)
+        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+        await message.channel.send(embed=embed)
+        log(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
+
+    elif message.content == prefix + '정보': #
         embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['info'], timestamp=datetime.datetime.utcnow())
         embed.set_thumbnail(url=thumbnail)
         embed.set_author(name=botname, icon_url=boticon)
@@ -181,6 +172,22 @@ def setembed_donthaveperm(message, permname):
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
     return embed
+
+def savedata(server=None, user=None):
+    if platform.system() == 'Windows':
+        if server != None:
+            with open('C:/salmonbot/' + config['serverdataFileName'], 'w', encoding='utf-8') as serverdata_save:
+                json.dump(server, serverdata_save, indent=4)
+        if user != None:
+            with open('C:/salmonbot/' + config['userdataFileName'], 'w', encoding='utf-8') as userdata_save:
+                json.dump(user, userdata_save, indent=4)
+    if platform.system() == 'Linux':
+        if server != None:
+            with open('/.salmonbot/' + config['serverdataFileName'], 'w', encoding='utf-8') as serverdata_save:
+                json.dump(server, serverdata_save, indent=4)
+        if user != None:
+            with open('/.salmonbot/' + config['userdataFileName'], 'w', encoding='utf-8') as userdata_save:
+                json.dump(user, userdata_save, indent=4)
 
 # 로그 출력기 - 
 # 함수 인자: fwho: 수신자, fwhere_channel: 수신 채널 아이디, freceived: 수신한 메시지 내용, fsent: 발신한 메시지 요약, fetc: 기타 기록, fwhere_server: 수신 서버 아이디
