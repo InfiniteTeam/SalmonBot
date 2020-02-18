@@ -91,6 +91,7 @@ async def on_message(message):
                 msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
             except asyncio.TimeoutError:
                 await message.channel.send('시간이 초과되었습니다.')
+                log(message.author.id, message.channel.id, message.content, '[등록 시간 초과]', fwhere_server=serverid_or_type)
             else:
                 if msg.content == '동의':
                     today = datetime.datetime.today()
@@ -103,8 +104,8 @@ async def on_message(message):
                         tyear = f'0{tday}'
 
                     if str(message.author.id) in userdata: # 중복 등록 방지
-                        await message.channel.send(f'오류! 이미 등록된 사용자입니다! `{prefix}등록` 명령을 여러 번 입력한 것으로 추측됩니다.')
-                        log(message.author.id, message.channel.id, msg.content, '[오류: 중복 등록 감지 및 등록 취소]', fwhere_server=serverid_or_type)
+                        await message.channel.send(f'오류! 이미 등록된 사용자입니다!')
+                        log(message.author.id, message.channel.id, msg.content, '[오류: 중복 등록 감지]', fwhere_server=serverid_or_type)
                     else:
                         userdata[str(message.author.id)] = {'level': 1, 'type': 'User', 'date': f'{tyear}.{tmonth}.{tday}'}
                         savedata(user=userdata)
@@ -112,6 +113,7 @@ async def on_message(message):
                         log(message.author.id, message.channel.id, msg.content, '[등록 완료]', fwhere_server=serverid_or_type)
                 else:
                     await message.channel.send('취소되었습니다. 다시 시도해 주세요.')
+                    log(message.author.id, message.channel.id, message.content, '[등록 취소됨]', fwhere_server=serverid_or_type)
         return
 
     # 등록되지 않은 유저일 경우
@@ -124,22 +126,33 @@ async def on_message(message):
         return
 
     elif message.content == prefix + '탈퇴':
-        await message.channel.send(f'<@{message.author.id}>')
-        embed = discord.Embed(title=f'{botname} 탈퇴',
-        description='''**연어봇 이용약관 및 개인정보 취급방침 동의를 철회하고, 연어봇을 탈퇴하게 됩니다.
-        이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 연어봇에서 삭제되며, __되돌릴 수 없습니다.__**
-        계속하시려면 ``탈퇴``를 입력하십시오.''', color=color['warn'], timestamp=datetime.datetime.utcnow())
-        embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
-        embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-        await message.channel.send(embed=embed)
-        log(message.author.id, message.channel.id, message.content, '[사용자 탈퇴]', fwhere_server=serverid_or_type)
-        try:
-            msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
-        except asyncio.TimeoutError:
-            await message.channel.send('시간이 초과되었습니다.')
+        if str(message.author.id) in userdata:
+            await message.channel.send(f'<@{message.author.id}>')
+            embed = discord.Embed(title=f'{botname} 탈퇴',
+            description='''**연어봇 이용약관 및 개인정보 취급방침 동의를 철회하고, 연어봇을 탈퇴하게 됩니다.**
+            이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 연어봇에서 삭제되며, __되돌릴 수 없습니다.__
+            계속하시려면 `탈퇴`를 입력하십시오.''', color=color['warn'], timestamp=datetime.datetime.utcnow())
+            embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+            embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+            await message.channel.send(embed=embed)
+            log(message.author.id, message.channel.id, message.content, '[사용자 탈퇴]', fwhere_server=serverid_or_type)
+            try:
+                msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
+            except asyncio.TimeoutError:
+                await message.channel.send('시간이 초과되었습니다.')
+                log(message.author.id, message.channel.id, message.content, '[탈퇴 시간 초과]', fwhere_server=serverid_or_type)
+            else:
+                if msg.content == '탈퇴':
+                    if str(message.author.id) in userdata:
+                        del userdata[str(message.author.id)]
+                        savedata(user=userdata)
+                        await message.channel.send('탈퇴되었으며 모든 사용자 데이터가 삭제되었습니다.')
+                    else:
+                        await message.channel.send('오류! 이미 탈퇴된 사용자입니다.')
+                        log(message.author.id, message.channel.id, message.content, '[오류: 이미 탈퇴됨]', fwhere_server=serverid_or_type)
         else:
-            if msg.content == '탈퇴':
-                pass
+            await message.channel.send('등록되지 않은 사용자입니다.')
+            log(message.author.id, message.channel.id, message.content, '[등록되지 않은 사용자 탈퇴]', fwhere_server=serverid_or_type)
         return
 
     # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
