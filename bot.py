@@ -42,31 +42,51 @@ for i in color.keys(): # convert HEX to DEC
 versionNum = version['versionNum']
 versionPrefix = version['versionPrefix']
 
+seclist = ['dd']
+black = []
+
 # ========== prepair bot ==========
 client = discord.Client()
 
 @client.event
 async def on_ready():
     print('Logged in as{}'.format(client.user))
-    latency.start()
+    tensecloop.start()
     await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다. 
 
-@tasks.loop(seconds=30)
-async def latency():
-    global ping, pinglevel
-    ping = round(1000 * client.latency)
-    if ping <= 100: pinglevel = '🔵 매우좋음'
-    elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
-    elif ping > 250 and ping <= 400: pinglevel = '🟡 보통'
-    elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
-    elif ping > 550: pinglevel = '⚫ 매우나쁨'
-
-    print('LATENCY:', ping, pinglevel.split(' ')[1])
+@tasks.loop(seconds=10)
+async def tensecloop():
+    global ping, pinglevel, seclist
+    try:
+        ping = round(1000 * client.latency)
+        if ping <= 100: pinglevel = '🔵 매우좋음'
+        elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
+        elif ping > 250 and ping <= 400: pinglevel = '🟡 보통'
+        elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
+        elif ping > 550: pinglevel = '⚫ 매우나쁨'
+        #print(ping)
+        if seclist.count(spamuser) >= 5:
+            black.append(spamuser)
+            await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+        seclist = []
+    except: pass
 
 @client.event
 async def on_message(message):
-    # 메시지 발신자가 다른 봇이거나 자기 자신인 경우, 접두사 뒤 명령어가 없는 경우 무시합니다.
-    if message.author.bot or message.author == client.user or message.content == '%':
+    global spamuser, globalmsg
+    if message.author == client.user:
+        return
+    if message.content.startswith(prefix):
+        globalmsg = message
+        spamuser = str(message.author.id)
+        seclist.append(spamuser)
+        if message.content == prefix + '블랙':
+            await message.channel.send(str(black))
+
+        if str(message.author.id) in black:
+            return
+    # 메시지 발신자가 다른 봇이거나 접두사 뒤 명령어가 없는 경우 무시합니다.
+    if message.author.bot or message.content == prefix:
         return
     # 메시지를 수신한 곳이 서버인 경우 True, 아니면 False.
     if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type
@@ -82,7 +102,7 @@ async def on_message(message):
             log(message.author.id, message.channel.id, message.content, '[이미 등록된 사용자]', fwhere_server=serverid_or_type)
         else:
             await message.channel.send(f'<@{message.author.id}>')
-            embed = discord.Embed(title='약관', description='연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.', color=color['ask'], timestamp=datetime.datetime.utcnow())
+            embed = discord.Embed(title=f'{botname} 등록', description='**연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=color['ask'], timestamp=datetime.datetime.utcnow())
             embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
             embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
             await message.channel.send(embed=embed)
@@ -104,16 +124,16 @@ async def on_message(message):
                         tyear = f'0{tday}'
 
                     if str(message.author.id) in userdata: # 중복 등록 방지
-                        await message.channel.send(f'오류! 이미 등록된 사용자입니다!')
-                        log(message.author.id, message.channel.id, msg.content, '[오류: 중복 등록 감지]', fwhere_server=serverid_or_type)
+                        await message.channel.send(f'<@{message.author.id}> 오류! 이미 등록된 사용자입니다!')
+                        log(msg.author.id, msg.channel.id, msg.content, '[오류: 중복 등록 감지]', fwhere_server=serverid_or_type)
                     else:
                         userdata[str(message.author.id)] = {'level': 1, 'type': 'User', 'date': f'{tyear}.{tmonth}.{tday}'}
                         savedata(user=userdata)
                         await message.channel.send(f'등록되었습니다. `{prefix}도움` 을 입력해서 전체 명령어를 볼 수 있습니다.')
-                        log(message.author.id, message.channel.id, msg.content, '[등록 완료]', fwhere_server=serverid_or_type)
+                        log(msg.author.id, msg.channel.id, msg.content, '[등록 완료]', fwhere_server=serverid_or_type)
                 else:
                     await message.channel.send('취소되었습니다. 다시 시도해 주세요.')
-                    log(message.author.id, message.channel.id, message.content, '[등록 취소됨]', fwhere_server=serverid_or_type)
+                    log(msg.author.id, msg.channel.id, msg.content, '[등록 취소됨]', fwhere_server=serverid_or_type)
         return
 
     # 등록되지 않은 유저일 경우
@@ -147,9 +167,12 @@ async def on_message(message):
                         del userdata[str(message.author.id)]
                         savedata(user=userdata)
                         await message.channel.send('탈퇴되었으며 모든 사용자 데이터가 삭제되었습니다.')
+                        log(msg.author.id, msg.channel.id, msg.content, '[탈퇴 완료]', fwhere_server=serverid_or_type)
                     else:
                         await message.channel.send('오류! 이미 탈퇴된 사용자입니다.')
-                        log(message.author.id, message.channel.id, message.content, '[오류: 이미 탈퇴됨]', fwhere_server=serverid_or_type)
+                        log(msg.author.id, msg.channel.id, msg.content, '[오류: 이미 탈퇴됨]', fwhere_server=serverid_or_type)
+                else:
+                    await message.channel.send('취소되었습니다. 다시 시도해 주세요.')
         else:
             await message.channel.send('등록되지 않은 사용자입니다.')
             log(message.author.id, message.channel.id, message.content, '[등록되지 않은 사용자 탈퇴]', fwhere_server=serverid_or_type)
@@ -157,7 +180,7 @@ async def on_message(message):
 
     # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
     if message.content.startswith(prefix) and type(serverid_or_type) == int and not str(message.guild.id) in serverdata:
-        embed=discord.Embed(title='⏰미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}설치`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+        embed=discord.Embed(title='⏰미등록 서버', description=f'**등록되어 있지 않은 서버입니다!**\n`{prefix}활성`명령을 입력해서, 봇 설정을 완료해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         embed.set_author(name=botname, icon_url=boticon)
         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
         await message.channel.send(embed=embed)
