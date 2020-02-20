@@ -65,10 +65,11 @@ async def tensecloop():
         elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
         elif ping > 550: pinglevel = '⚫ 매우나쁨'
         #print(ping)
-        if seclist.count(spamuser) >= 5:
-            black.append(spamuser)
-            await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-        seclist = []
+        if not str(globalmsg.author.id) in black:
+            if seclist.count(spamuser) >= 5:
+                black.append(spamuser)
+                await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+            seclist = []
     except: pass
 
 @client.event
@@ -177,6 +178,9 @@ async def on_message(message):
             await message.channel.send('등록되지 않은 사용자입니다.')
             log(message.author.id, message.channel.id, message.content, '[등록되지 않은 사용자 탈퇴]', fwhere_server=serverid_or_type)
         return
+
+    elif message.content == prefix + '공지채널':
+        print(client.guilds)
 
     # 수신 위치가 서버이고 미등록 서버인 경우. 그리고 설치 명령 실행 시에는 이 알림이 발신되지 않음.
     if message.content.startswith(prefix) and type(serverid_or_type) == int and not str(message.guild.id) in serverdata:
