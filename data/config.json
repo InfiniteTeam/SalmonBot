@@ -4,8 +4,7 @@
     "activity": "연어봇 - %도움",
     "status": "dnd",
     "tokenFileName": "token.txt",
-    "userdataFileName": "userdata.json",
-    "serverdataFileName": "serverdata.json",
+    "dbacName": "dbac.json",
     "botIconUrl": "http://salmon.arpa.kro.kr",
     "thumbnailUrl": "https://k.kakaocdn.net/dn/omoP0/btqB0fNhk6Q/a98du2XtKUkOISuUMPjIT1/icon.png?attach=1&knm=img.png",
     "color": {
