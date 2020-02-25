@@ -204,18 +204,12 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
 
-            elif message.content == prefix + '정보 데이터서버':
+            elif message.content == prefix + '서버상태 데이터서버':
                 dbalive = None
                 try: db.ping(reconnect=False)
                 except: dbalive = 'Closed'
                 else: dbalive = 'Alive'
-                embed=discord.Embed(title='🛠 데이터베이스 정보', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['info'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=botname, icon_url=boticon)
-                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[데이터베이스 정보]', fwhere_server=serverid_or_type)
 
-            elif message.content == prefix + '서버상태 데이터서버':
                 temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
                 temp = temp[5:]
                 cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
@@ -232,13 +226,13 @@ async def on_message(message):
                 swapusedpct = round((int(swapused) / int(swaptotal)) * 100)
                 swapbar = '|' + '▩' * swapbarusedpx + 'ㅤ' * (10 - swapbarusedpx) + '|'
 
-                embed=discord.Embed(title='🖥 데이터서버 상태', color=color['info'], timestamp=datetime.datetime.utcnow())
+                embed=discord.Embed(title='🖥 데이터서버 상태', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['info'], timestamp=datetime.datetime.utcnow())
                 embed.add_field(name='CPU사용량', value=f'```  ALL: {cpulist[0]}%\nCPU 0: {cpulist[1]}%\nCPU 1: {cpulist[2]}%\nCPU 2: {cpulist[3]}%\nCPU 3: {cpulist[4]}%\nCPU 온도: {temp}```', inline=True)
                 embed.add_field(name='메모리 사용량', value=f'메모리\n```{membar}\n {memused}M/{memtotal}M ({memusedpct}%)```스왑 메모리\n```{swapbar}\n {swapused}M/{swaptotal}M ({swapusedpct}%)```', inline=True)
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[데이터베이스 정보]', fwhere_server=serverid_or_type)
+                msglog(message.author.id, message.channel.id, message.content, '[데이터베이스 상태]', fwhere_server=serverid_or_type)
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
