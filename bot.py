@@ -12,6 +12,7 @@ import logging
 import logging.handlers
 import paramiko
 import re
+import os
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -102,7 +103,7 @@ async def on_ready():
 
 @tasks.loop(seconds=5)
 async def tensecloop():
-    global ping, pinglevel, seclist
+    global ping, pinglevel, seclist, dbping
     try:
         ping = round(1000 * client.latency)
         if ping <= 100: pinglevel = '🔵 매우좋음'
@@ -111,7 +112,10 @@ async def tensecloop():
         elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
         elif ping > 550: pinglevel = '⚫ 매우나쁨'
         pinglogger.info(f'{ping}ms')
-        pinglogger.info(f'{db.open}ms')
+        pinglogger.info(f'{db.open}')
+        dbip = config['dbIP']
+        pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
+        dbping = re.findall('\d+', pingcmd)[1]
         if not str(globalmsg.author.id) in black:
             if seclist.count(spamuser) >= 8:
                 black.append(spamuser)
@@ -194,13 +198,13 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '핑':
-                embed=discord.Embed(title='🏓 퐁!', description=f'**현재 지연시간: {ping}ms - {pinglevel}**\n지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+                embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
 
-            elif message.content == prefix + '디비':
+            elif message.content == prefix + '정보 데이터서버':
                 dbalive = None
                 try: db.ping(reconnect=False)
                 except: dbalive = 'Closed'
@@ -211,21 +215,26 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[데이터베이스 정보]', fwhere_server=serverid_or_type)
 
-            elif message.content == prefix + '서버상태 디비':
-                temp = sshcmd('vcgencmd measure_temp')
+            elif message.content == prefix + '서버상태 데이터서버':
+                temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
                 temp = temp[5:]
-
-                cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'")
+                cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
                 cpulist = cpus.split('\n')[:-1]
 
                 mem = sshcmd('free -m')
                 memlist = re.findall('\d+', mem)
                 memtotal, memused, memfree, membc, swaptotal, swapused, swapfree = memlist[0], memlist[1], memlist[2], memlist[4], memlist[6], memlist[7], memlist[8]
                 memrealfree = str(int(memfree) + int(membc))
+                membarusedpx = round((int(memused) / int(memtotal)) * 10)
+                memusedpct = round((int(memused) / int(memtotal)) * 100)
+                membar = '|' + '▩' * membarusedpx + 'ㅤ' * (10 - membarusedpx) + '|'
+                swapbarusedpx = round((int(swapused) / int(swaptotal)) * 10)
+                swapusedpct = round((int(swapused) / int(swaptotal)) * 100)
+                swapbar = '|' + '▩' * swapbarusedpx + 'ㅤ' * (10 - swapbarusedpx) + '|'
 
                 embed=discord.Embed(title='🖥 데이터서버 상태', color=color['info'], timestamp=datetime.datetime.utcnow())
-                embed.add_field(name='CPU사용량', value=f'ALL: {cpulist[0]}%\nCPU 0: {cpulist[1]}%\nCPU 1: {cpulist[2]}%\nCPU 2: {cpulist[3]}%\nCPU 3: {cpulist[4]}%\nCPU 온도: {temp}', inline=True)
-                embed.add_field(name='메모리 사용량', value=f'메모리 전체: {memtotal}M\n메모리 사용됨: {memused}M\n메모리 사용가능: {memrealfree}M\n스왑 전체: {swapfree}M\n스왑 사용됨: {swapused}M\n스왑 사용가능: {swapfree}M', inline=True)
+                embed.add_field(name='CPU사용량', value=f'```  ALL: {cpulist[0]}%\nCPU 0: {cpulist[1]}%\nCPU 1: {cpulist[2]}%\nCPU 2: {cpulist[3]}%\nCPU 3: {cpulist[4]}%\nCPU 온도: {temp}```', inline=True)
+                embed.add_field(name='메모리 사용량', value=f'메모리\n```{membar}\n {memused}M/{memtotal}M ({memusedpct}%)```스왑 메모리\n```{swapbar}\n {swapused}M/{swaptotal}M ({swapusedpct}%)```', inline=True)
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
