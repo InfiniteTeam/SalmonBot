@@ -13,6 +13,7 @@ import logging.handlers
 import paramiko
 import re
 import os
+import urllib.request
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -28,13 +29,17 @@ if platform.system() == 'Windows':
         dbac = json.load(dbac_file)
     with open('C:/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
         ssh = json.load(ssh_file)
+    with open('C:/salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
+        openapi = json.load(openapi_file)
 elif platform.system() == 'Linux':
     with open('/.salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
         token = token_file.readline()
     with open('/.salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
-    with open('C:/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
+    with open('/.salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
         ssh = json.load(ssh_file)
+    with open('/.salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
+        openapi = json.load(openapi_file)
 
 botname = config['botName']
 prefix = config['prefix']
@@ -71,6 +76,24 @@ db = pymysql.connect(
     charset='utf8'
 )
 cur = db.cursor(pymysql.cursors.DictCursor)
+
+# =============== NAVER Open API ===============
+naverapi_id = openapi['naver']['clientID']
+naverapi_secret = openapi['naver']['clientSec']
+
+def naverSearch_blog(text):
+    encText = urllib.parse.quote(text)
+    url = "https://openapi.naver.com/v1/search/blog?query=" + encText + '&display=100'
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", naverapi_id)
+    request.add_header("X-Naver-Client-Secret", naverapi_secret)
+    response = urllib.request.urlopen(request)
+    rescode = response.getcode()
+    if rescode == 200:
+        results = json.load(response)
+        return results
+    else:
+        return rescode
 
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
@@ -144,7 +167,6 @@ async def on_message(message):
         globalmsg = message
         spamuser = str(message.author.id)
         seclist.append(spamuser)
-        print(seclist)
         def checkmsg(m):
             return m.channel == message.channel and m.author == message.author
         userexist = cur.execute('select * from userdata where id=%s', message.author.id) # 유저 등록 여부
@@ -156,12 +178,12 @@ async def on_message(message):
                 embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
                 embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[이용약관 및 개인정보 취급방침의 동의]', fwhere_server=serverid_or_type) 
+                msglog(message.author.id, message.channel.id, message.content, '[등록: 이용약관 및 개인정보 취급방침의 동의]', fwhere_server=serverid_or_type) 
                 try:
                     msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
                 except asyncio.TimeoutError:
                     await message.channel.send('시간이 초과되었습니다.')
-                    msglog(message.author.id, message.channel.id, message.content, '[등록 시간 초과]', fwhere_server=serverid_or_type)
+                    msglog(message.author.id, message.channel.id, message.content, '[등록: 시간 초과]', fwhere_server=serverid_or_type)
                 else:
                     if msg.content == '동의':
                         if cur.execute('select * from userdata where id=%s', (msg.author.id)) == 0:
@@ -169,10 +191,13 @@ async def on_message(message):
                             if cur.execute('insert into userdata values (%s, %s, %s, %s)', (msg.author.id, 1, 'User', datetime.date(now.year, now.month, now.day))) == 1:
                                 db.commit()
                                 await message.channel.send(f'등록되었습니다. `{prefix}도움` 명령으로 전체 명령을 볼 수 있습니다.')
+                                msglog(message.author.id, message.channel.id, message.content, '[등록: 등록 완료]', fwhere_server=serverid_or_type)
                         else:
                             await message.channel.send('이미 등록된 사용자입니다.')
+                            msglog(message.author.id, message.channel.id, message.content, '[등록: 이미 등록됨]', fwhere_server=serverid_or_type)
                     else:
                         await message.channel.send('취소되었습니다.')
+                        msglog(message.author.id, message.channel.id, message.content, '[등록: 취소됨]', fwhere_server=serverid_or_type)
             else:
                 embed=discord.Embed(title='❔ 미등록 사용자', description=f'**등록되어 있지 않은 사용자입니다!**\n`{prefix}등록`명령을 입력해서, 약관에 동의해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
@@ -180,7 +205,7 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[미등록 사용자]', fwhere_server=serverid_or_type)
 
-        elif userexist == 1:
+        elif userexist == 1: # 일반 사용자 명령어
             if message.content == prefix + '등록':
                 await message.channel.send('이미 등록된 사용자입니다!')
             elif message.content == prefix + '블랙':
@@ -232,14 +257,98 @@ async def on_message(message):
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[데이터베이스 상태]', fwhere_server=serverid_or_type)
+                msglog(message.author.id, message.channel.id, message.content, '[서버상태 데이터서버]', fwhere_server=serverid_or_type)
+
+            elif message.content.startswith(prefix + '네이버검색'):
+                if message.content.startswith(prefix + '네이버검색 블로그'):
+                    cmdlen = 9
+                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                        page = 0
+                        word = message.content[len(prefix)+1+cmdlen:]
+                        blogsc = naverSearch_blog(word)
+                        if blogsc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(blogsc) == int:
+                            await message.channel.send(f'오류! 코드: {blogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        else:
+                            print(len(blogsc['items']))
+                            for linenum in range(len(blogsc['items'])):
+                                blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace('<b>', '`')
+                                blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace('</b>', '`')
+                                blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace('<b>', '`')
+                                blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace('</b>', '`')
+                            def naverblogembed(pg, one):
+                                embed=discord.Embed(title=f'🔍 네이버 블로그 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    print(page*one+af)
+                                    title = blogsc['items'][page*one+af]['title']
+                                    link = blogsc['items'][page*one+af]['link']
+                                    description = blogsc['items'][page*one+af]['description']
+                                    bloggername = blogsc['items'][page*one+af]['bloggername']
+                                    bloggerlink = blogsc['items'][page*one+af]['bloggerlink']
+                                    postdate_year = int(blogsc['items'][page*one+af]['postdate'][0:4])
+                                    postdate_month = int(blogsc['items'][page*one+af]['postdate'][4:6])
+                                    postdate_day = int(blogsc['items'][page*one+af]['postdate'][6:8])
+                                    postdate = f'{postdate_year}년 {postdate_month}월 {postdate_day}일'
+                                    embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- [*{bloggername}*]({bloggerlink}) / **{postdate}**", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{round(100/one)} 페이지, 총 {blogsc['total']}건 중 100건, 정확도순```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            blogresult = await message.channel.send(embed=naverblogembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await blogresult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색]', fwhere_server=serverid_or_type)
+                            def naverblogcheck(reaction, user):
+                                return user == message.author and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                print('loop')
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverblogcheck)
+                                except asyncio.TimeoutError:
+                                    await blogresult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        print('s')
+                                        await blogresult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await blogresult.remove_reaction('▶', user)
+                                        if page < 25-1:
+                                            page += 1
+                                        else:
+                                            return
+                                    if reaction.emoji == '◀':
+                                        await blogresult.remove_reaction('◀', user)
+                                        if page > 1-1: 
+                                            page -= 1
+                                        else:
+                                            return
+                                    if reaction.emoji == '⏩':
+                                        await blogresult.remove_reaction('⏩', user)
+                                        if page < 25-5:
+                                            page += 4
+                                        else:
+                                            page = 24
+                                    if reaction.emoji == '⏪':
+                                        await blogresult.remove_reaction('⏪', user)
+                                        if page > 25-5:
+                                            page -= 4
+                                        else:
+                                            page = 0
+                                    await blogresult.edit(embed=naverblogembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색 정지]', fwhere_server=serverid_or_type)
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어입니다!]', fwhere_server=serverid_or_type)
+                msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어]', fwhere_server=serverid_or_type)
         
         else:
             errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type)
