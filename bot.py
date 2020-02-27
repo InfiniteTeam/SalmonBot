@@ -320,13 +320,13 @@ async def on_message(message):
                                         if page < 25-1:
                                             page += 1
                                         else:
-                                            return
+                                            continue
                                     if reaction.emoji == '◀':
                                         await blogresult.remove_reaction('◀', user)
                                         if page > 1-1: 
                                             page -= 1
                                         else:
-                                            return
+                                            continue
                                     if reaction.emoji == '⏩':
                                         await blogresult.remove_reaction('⏩', user)
                                         if page < 25-5:
@@ -335,7 +335,7 @@ async def on_message(message):
                                             page = 24
                                     if reaction.emoji == '⏪':
                                         await blogresult.remove_reaction('⏪', user)
-                                        if page > 25-5:
+                                        if page > 4:
                                             page -= 4
                                         else:
                                             page = 0
