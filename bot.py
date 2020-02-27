@@ -109,6 +109,20 @@ def naverSearch_news(text):
     else:
         return rescode
 
+def naverSearch_book(text):
+    encText = urllib.parse.quote(text)
+    url = "https://openapi.naver.com/v1/search/book?query=" + encText + '&display=100'
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", naverapi_id)
+    request.add_header("X-Naver-Client-Secret", naverapi_secret)
+    response = urllib.request.urlopen(request)
+    rescode = response.getcode()
+    if rescode == 200:
+        results = json.load(response)
+        return results
+    else:
+        return rescode
+
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
@@ -287,16 +301,14 @@ async def on_message(message):
                             await message.channel.send(f'오류! 코드: {blogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
                         else:
-                            print(len(blogsc['items']))
                             for linenum in range(len(blogsc['items'])):
-                                for replaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace(replaces[0], replaces[1])
-                                    blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace(replaces[0], replaces[1])
+                                for blogreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace(blogreplaces[0], blogreplaces[1])
+                                    blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace(blogreplaces[0], blogreplaces[1])
                             def naverblogembed(pg, one):
-                                embed=discord.Embed(title=f'🔍 네이버 블로그 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                embed=discord.Embed(title=f'🔍📝 네이버 블로그 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
                                 for af in range(one):
                                     if page*one+af+1 <= blogsc['total']:
-                                        print(page*one+af)
                                         title = blogsc['items'][page*one+af]['title']
                                         link = blogsc['items'][page*one+af]['link']
                                         description = blogsc['items'][page*one+af]['description']
@@ -314,9 +326,7 @@ async def on_message(message):
                                 if blogsc['total'] < one: allpage = 0
                                 else: 
                                     if max100: allpage = 100//one
-                                    else:
-                                        allpage = blogsc['total']//one
-                                        if blogsc['total']%one == 0: allpage -= 1
+                                    else: allpage = (blogsc['total']-1)//one
                                 embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, 정확도순```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -324,10 +334,8 @@ async def on_message(message):
                             
                             if blogsc['total'] < 4: blogallpage = 0
                             else: 
-                                if blogsc['total'] > 100: blogallpage = 100//4
-                                else:
-                                    blogallpage = blogsc['total']//4
-                                    if blogsc['total']%4 == 0: blogallpage -= 1
+                                if blogsc['total'] > 100: blogallpage = (100-1)//4
+                                else: blogallpage = (blogsc['total']-1)//4
 
                             blogresult = await message.channel.send(embed=naverblogembed(page, 4))
                             for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
@@ -336,7 +344,7 @@ async def on_message(message):
                             def naverblogcheck(reaction, user):
                                 return user == message.author and blogresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                             while True:
-                                print('loop')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
                                 try:
                                     reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverblogcheck)
                                 except asyncio.TimeoutError:
@@ -394,16 +402,14 @@ async def on_message(message):
                         elif newssc['total'] == 0:
                             await message.channel.send('검색 결과가 없습니다!')
                         else:
-                            print(len(newssc['items']))
                             for linenum in range(len(newssc['items'])):
-                                for replaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace(replaces[0], replaces[1])
-                                    newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace(replaces[0], replaces[1])
+                                for newsreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace(newsreplaces[0], newsreplaces[1])
+                                    newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace(newsreplaces[0], newsreplaces[1])
                             def navernewsembed(pg, one=4):
-                                embed=discord.Embed(title=f'🔍 네이버 뉴스 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                embed=discord.Embed(title=f'🔍📰 네이버 뉴스 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
                                 for af in range(one):
                                     if page*one+af+1 <= newssc['total']:
-                                        print(page*one+af)
                                         title = newssc['items'][page*one+af]['title']
                                         originallink = newssc['items'][page*one+af]['link']
                                         description = newssc['items'][page*one+af]['description']
@@ -422,10 +428,8 @@ async def on_message(message):
                                 else: max100 = ''
                                 if newssc['total'] < one: allpage = 0
                                 else: 
-                                    if max100: allpage = 100//one
-                                    else:
-                                        allpage = newssc['total']//one
-                                        if newssc['total']%one == 0: allpage -= 1
+                                    if max100: allpage = (100-1)//one
+                                    else: allpage = (newssc['total']-1)//one
                                 embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, 정확도순```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -433,10 +437,8 @@ async def on_message(message):
                             
                             if newssc['total'] < 4: newsallpage = 0
                             else: 
-                                if newssc['total'] > 100: newsallpage = 100//4
-                                else:
-                                    newsallpage = newssc['total']//4
-                                    if newssc['total']%4 == 0: newsallpage -= 1
+                                if newssc['total'] > 100: newsallpage = (100-1)//4
+                                else: newsallpage = (newssc['total']-1)//4
                             
                             newsresult = await message.channel.send(embed=navernewsembed(page, 4))
                             for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
@@ -445,7 +447,7 @@ async def on_message(message):
                             def navernewscheck(reaction, user):
                                 return user == message.author and newsresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                             while True:
-                                print('loop')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
                                 try:
                                     reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navernewscheck)
                                 except asyncio.TimeoutError:
@@ -487,6 +489,117 @@ async def on_message(message):
                                     await newsresult.edit(embed=navernewsembed(page, 4))
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색 정지]', fwhere_server=serverid_or_type)
+
+                elif message.content.startswith(prefix + '네이버검색 책'):
+                    cmdlen = 7
+                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                        page = 0
+                        word = message.content[len(prefix)+1+cmdlen:]
+                        booksc = naverSearch_book(word)
+                        if booksc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(booksc) == int:
+                            await message.channel.send(f'오류! 코드: {booksc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif booksc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
+                        else:
+                            for linenum in range(len(booksc['items'])):
+                                for bookreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    booksc['items'][linenum]['title'] = booksc['items'][linenum]['title'].replace(bookreplaces[0], bookreplaces[1])
+                                    booksc['items'][linenum]['description'] = booksc['items'][linenum]['description'].replace(bookreplaces[0], bookreplaces[1])
+                                '''
+                                for bookreplaces in [['`', ''], ['&quot;', ''], ['&lsquo;', ''], ['&rsquo;', ''], ['<b>', ''], ['</b>', '']]:
+                                    booksc['items'][linenum]['description'] = booksc['items'][linenum]['description'].replace(bookreplaces[0], bookreplaces[1])
+                                '''
+                                booksc['items'][linenum]['author'] = booksc['items'][linenum]['author'].replace('|', ', ')
+                            def naverbookembed(pg, one=4):
+                                embed=discord.Embed(title=f'🔍📗 네이버 책 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    if page*one+af+1 <= booksc['total']:
+                                        title = booksc['items'][page*one+af]['title']
+                                        link = booksc['items'][page*one+af]['link']
+                                        author = booksc['items'][page*one+af]['author']
+                                        price = booksc['items'][page*one+af]['price']
+                                        discount = booksc['items'][page*one+af]['discount']
+                                        publisher = booksc['items'][page*one+af]['publisher']
+                                        description = booksc['items'][page*one+af]['description']
+                                        if description == '':
+                                            description = '(설명 없음)'
+                                        pubdate_year = int(booksc['items'][page*one+af]['pubdate'][0:4])
+                                        pubdate_month = int(booksc['items'][page*one+af]['pubdate'][4:6])
+                                        pubdate_day = int(booksc['items'][page*one+af]['pubdate'][6:8])
+                                        pubdate = f'{pubdate_year}년 {pubdate_month}월 {pubdate_day}일'
+                                        isbn = booksc['items'][page*one+af]['isbn'].split(' ')[1]
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{author} 저 | {publisher} | {pubdate} | ISBN: {isbn}\n**{discount}원**~~`{price}원`~~\n\n{description}", inline=False)
+                                    else:
+                                        break
+                                if booksc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if booksc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = (100-1)//one
+                                    else: allpage = (booksc['total']-1)//one
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, 정확도순```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            
+                            if booksc['total'] < 4: bookallpage = 0
+                            else: 
+                                if booksc['total'] > 100: bookallpage = (100-1)//4
+                                else: bookallpage = (booksc['total']-1)//4
+                            
+                            bookresult = await message.channel.send(embed=naverbookembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await bookresult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색]', fwhere_server=serverid_or_type)
+                            def naverbookcheck(reaction, user):
+                                return user == message.author and bookresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverbookcheck)
+                                except asyncio.TimeoutError:
+                                    await bookresult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        print('s')
+                                        await bookresult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await bookresult.remove_reaction('▶', user)
+                                        if page < bookallpage:
+                                            page += 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '◀':
+                                        await bookresult.remove_reaction('◀', user)
+                                        if page > 0: 
+                                            page -= 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '⏩':
+                                        await bookresult.remove_reaction('⏩', user)
+                                        if page < bookallpage-4:
+                                            page += 4
+                                        elif page == bookallpage:
+                                            continue
+                                        else:
+                                            page = bookallpage
+                                    if reaction.emoji == '⏪':
+                                        await bookresult.remove_reaction('⏪', user)
+                                        if page > 4:
+                                            page -= 4
+                                        elif page == 0:
+                                            continue
+                                        else:
+                                            page = 0
+                                    await bookresult.edit(embed=naverbookembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색 정지]', fwhere_server=serverid_or_type)
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
