@@ -289,28 +289,46 @@ async def on_message(message):
                         else:
                             print(len(blogsc['items']))
                             for linenum in range(len(blogsc['items'])):
-                                blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace('<b>', '`')
-                                blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace('</b>', '`')
-                                blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace('<b>', '`')
-                                blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace('</b>', '`')
+                                for replaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace(replaces[0], replaces[1])
+                                    blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace(replaces[0], replaces[1])
                             def naverblogembed(pg, one):
                                 embed=discord.Embed(title=f'🔍 네이버 블로그 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
                                 for af in range(one):
-                                    print(page*one+af)
-                                    title = blogsc['items'][page*one+af]['title']
-                                    link = blogsc['items'][page*one+af]['link']
-                                    description = blogsc['items'][page*one+af]['description']
-                                    bloggername = blogsc['items'][page*one+af]['bloggername']
-                                    bloggerlink = blogsc['items'][page*one+af]['bloggerlink']
-                                    postdate_year = int(blogsc['items'][page*one+af]['postdate'][0:4])
-                                    postdate_month = int(blogsc['items'][page*one+af]['postdate'][4:6])
-                                    postdate_day = int(blogsc['items'][page*one+af]['postdate'][6:8])
-                                    postdate = f'{postdate_year}년 {postdate_month}월 {postdate_day}일'
-                                    embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- [*{bloggername}*]({bloggerlink}) / **{postdate}**", inline=False)
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{round(100/one)} 페이지, 총 {blogsc['total']}건 중 100건, 정확도순```", inline=False)
+                                    if page*one+af+1 <= blogsc['total']:
+                                        print(page*one+af)
+                                        title = blogsc['items'][page*one+af]['title']
+                                        link = blogsc['items'][page*one+af]['link']
+                                        description = blogsc['items'][page*one+af]['description']
+                                        bloggername = blogsc['items'][page*one+af]['bloggername']
+                                        bloggerlink = blogsc['items'][page*one+af]['bloggerlink']
+                                        postdate_year = int(blogsc['items'][page*one+af]['postdate'][0:4])
+                                        postdate_month = int(blogsc['items'][page*one+af]['postdate'][4:6])
+                                        postdate_day = int(blogsc['items'][page*one+af]['postdate'][6:8])
+                                        postdate = f'{postdate_year}년 {postdate_month}월 {postdate_day}일'
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- [*{bloggername}*]({bloggerlink}) / **{postdate}**", inline=False)
+                                    else:
+                                        break
+                                if blogsc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if blogsc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = 100//one
+                                    else:
+                                        allpage = blogsc['total']//one
+                                        if blogsc['total']%one == 0: allpage -= 1
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, 정확도순```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
+                            
+                            if blogsc['total'] < 4: blogallpage = 0
+                            else: 
+                                if blogsc['total'] > 100: blogallpage = 100//4
+                                else:
+                                    blogallpage = blogsc['total']//4
+                                    if blogsc['total']%4 == 0: blogallpage -= 1
+
                             blogresult = await message.channel.send(embed=naverblogembed(page, 4))
                             for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
                                 await blogresult.add_reaction(emoji)
@@ -331,26 +349,30 @@ async def on_message(message):
                                         break
                                     if reaction.emoji == '▶':
                                         await blogresult.remove_reaction('▶', user)
-                                        if page < 25-1:
+                                        if page < blogallpage:
                                             page += 1
                                         else:
                                             continue
                                     if reaction.emoji == '◀':
                                         await blogresult.remove_reaction('◀', user)
-                                        if page > 1-1: 
+                                        if page > 0: 
                                             page -= 1
                                         else:
                                             continue
                                     if reaction.emoji == '⏩':
                                         await blogresult.remove_reaction('⏩', user)
-                                        if page < 25-5:
+                                        if page < blogallpage-4:
                                             page += 4
+                                        elif page == blogallpage:
+                                            continue
                                         else:
-                                            page = 24
+                                            page = blogallpage
                                     if reaction.emoji == '⏪':
                                         await blogresult.remove_reaction('⏪', user)
                                         if page > 4:
                                             page -= 4
+                                        elif page == 0:
+                                            continue
                                         else:
                                             page = 0
                                     await blogresult.edit(embed=naverblogembed(page, 4))
@@ -369,33 +391,53 @@ async def on_message(message):
                         elif type(newssc) == int:
                             await message.channel.send(f'오류! 코드: {newssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif newssc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
                         else:
                             print(len(newssc['items']))
                             for linenum in range(len(newssc['items'])):
-                                newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace('<b>', '`')
-                                newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace('</b>', '`')
-                                newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace('<b>', '`')
-                                newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace('</b>', '`')
-                            def navernewsembed(pg, one):
+                                for replaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace(replaces[0], replaces[1])
+                                    newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace(replaces[0], replaces[1])
+                            def navernewsembed(pg, one=4):
                                 embed=discord.Embed(title=f'🔍 네이버 뉴스 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
                                 for af in range(one):
-                                    print(page*one+af)
-                                    title = newssc['items'][page*one+af]['title']
-                                    originallink = newssc['items'][page*one+af]['originallink']
-                                    description = newssc['items'][page*one+af]['description']
-                                    pubdateraw = newssc['items'][page*one+af]['pubDate']
-                                    pubdate = datetime.datetime.strptime(pubdateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                    if pubdate.strftime('%p') == 'AM':
-                                        dayweek = '오전'
-                                    elif pubdate.strftime('%p') == 'PM':
-                                        dayweek = '오후'
-                                    hour12 = pubdate.strftime('%I')
-                                    pubdatetext = f'{pubdate.year}년 {pubdate.month}월 {pubdate.day}일 {dayweek} {hour12}시 {pubdate.minute}분'
-                                    embed.add_field(name="ㅤ", value=f"**[{title}]({originallink})**\n{description}\n- **{pubdatetext}**", inline=False)
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{round(100/one)} 페이지, 총 {newssc['total']}건 중 100건, 정확도순```", inline=False)
+                                    if page*one+af+1 <= newssc['total']:
+                                        print(page*one+af)
+                                        title = newssc['items'][page*one+af]['title']
+                                        originallink = newssc['items'][page*one+af]['link']
+                                        description = newssc['items'][page*one+af]['description']
+                                        pubdateraw = newssc['items'][page*one+af]['pubDate']
+                                        pubdate = datetime.datetime.strptime(pubdateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                        if pubdate.strftime('%p') == 'AM':
+                                            dayweek = '오전'
+                                        elif pubdate.strftime('%p') == 'PM':
+                                            dayweek = '오후'
+                                        hour12 = pubdate.strftime('%I')
+                                        pubdatetext = f'{pubdate.year}년 {pubdate.month}월 {pubdate.day}일 {dayweek} {hour12}시 {pubdate.minute}분'
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({originallink})**\n{description}\n- **{pubdatetext}**", inline=False)
+                                    else:
+                                        break
+                                if newssc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if newssc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = 100//one
+                                    else:
+                                        allpage = newssc['total']//one
+                                        if newssc['total']%one == 0: allpage -= 1
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, 정확도순```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
+                            
+                            if newssc['total'] < 4: newsallpage = 0
+                            else: 
+                                if newssc['total'] > 100: newsallpage = 100//4
+                                else:
+                                    newsallpage = newssc['total']//4
+                                    if newssc['total']%4 == 0: newsallpage -= 1
+                            
                             newsresult = await message.channel.send(embed=navernewsembed(page, 4))
                             for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
                                 await newsresult.add_reaction(emoji)
@@ -416,26 +458,30 @@ async def on_message(message):
                                         break
                                     if reaction.emoji == '▶':
                                         await newsresult.remove_reaction('▶', user)
-                                        if page < 25-1:
+                                        if page < newsallpage:
                                             page += 1
                                         else:
                                             continue
                                     if reaction.emoji == '◀':
                                         await newsresult.remove_reaction('◀', user)
-                                        if page > 1-1: 
+                                        if page > 0: 
                                             page -= 1
                                         else:
                                             continue
                                     if reaction.emoji == '⏩':
                                         await newsresult.remove_reaction('⏩', user)
-                                        if page < 25-5:
+                                        if page < newsallpage-4:
                                             page += 4
+                                        elif page == newsallpage:
+                                            continue
                                         else:
-                                            page = 24
+                                            page = newsallpage
                                     if reaction.emoji == '⏪':
                                         await newsresult.remove_reaction('⏪', user)
                                         if page > 4:
                                             page -= 4
+                                        elif page == 0:
+                                            continue
                                         else:
                                             page = 0
                                     await newsresult.edit(embed=navernewsembed(page, 4))
