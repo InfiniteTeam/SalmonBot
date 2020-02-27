@@ -95,6 +95,20 @@ def naverSearch_blog(text):
     else:
         return rescode
 
+def naverSearch_news(text):
+    encText = urllib.parse.quote(text)
+    url = "https://openapi.naver.com/v1/search/news?query=" + encText + '&display=100'
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", naverapi_id)
+    request.add_header("X-Naver-Client-Secret", naverapi_secret)
+    response = urllib.request.urlopen(request)
+    rescode = response.getcode()
+    if rescode == 200:
+        results = json.load(response)
+        return results
+    else:
+        return rescode
+
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
@@ -302,7 +316,7 @@ async def on_message(message):
                                 await blogresult.add_reaction(emoji)
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색]', fwhere_server=serverid_or_type)
                             def naverblogcheck(reaction, user):
-                                return user == message.author and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                return user == message.author and blogresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                             while True:
                                 print('loop')
                                 try:
@@ -342,6 +356,91 @@ async def on_message(message):
                                     await blogresult.edit(embed=naverblogembed(page, 4))
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색 정지]', fwhere_server=serverid_or_type)
+
+                elif message.content.startswith(prefix + '네이버검색 뉴스'):
+                    cmdlen = 8
+                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                        page = 0
+                        word = message.content[len(prefix)+1+cmdlen:]
+                        newssc = naverSearch_news(word)
+                        if newssc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(newssc) == int:
+                            await message.channel.send(f'오류! 코드: {newssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        else:
+                            print(len(newssc['items']))
+                            for linenum in range(len(newssc['items'])):
+                                newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace('<b>', '`')
+                                newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace('</b>', '`')
+                                newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace('<b>', '`')
+                                newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace('</b>', '`')
+                            def navernewsembed(pg, one):
+                                embed=discord.Embed(title=f'🔍 네이버 뉴스 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    print(page*one+af)
+                                    title = newssc['items'][page*one+af]['title']
+                                    originallink = newssc['items'][page*one+af]['originallink']
+                                    description = newssc['items'][page*one+af]['description']
+                                    pubdateraw = newssc['items'][page*one+af]['pubDate']
+                                    pubdate = datetime.datetime.strptime(pubdateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                    if pubdate.strftime('%p') == 'AM':
+                                        dayweek = '오전'
+                                    elif pubdate.strftime('%p') == 'PM':
+                                        dayweek = '오후'
+                                    hour12 = pubdate.strftime('%I')
+                                    pubdatetext = f'{pubdate.year}년 {pubdate.month}월 {pubdate.day}일 {dayweek} {hour12}시 {pubdate.minute}분'
+                                    embed.add_field(name="ㅤ", value=f"**[{title}]({originallink})**\n{description}\n- **{pubdatetext}**", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{round(100/one)} 페이지, 총 {newssc['total']}건 중 100건, 정확도순```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            newsresult = await message.channel.send(embed=navernewsembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await newsresult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색]', fwhere_server=serverid_or_type)
+                            def navernewscheck(reaction, user):
+                                return user == message.author and newsresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                print('loop')
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navernewscheck)
+                                except asyncio.TimeoutError:
+                                    await newsresult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        print('s')
+                                        await newsresult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await newsresult.remove_reaction('▶', user)
+                                        if page < 25-1:
+                                            page += 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '◀':
+                                        await newsresult.remove_reaction('◀', user)
+                                        if page > 1-1: 
+                                            page -= 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '⏩':
+                                        await newsresult.remove_reaction('⏩', user)
+                                        if page < 25-5:
+                                            page += 4
+                                        else:
+                                            page = 24
+                                    if reaction.emoji == '⏪':
+                                        await newsresult.remove_reaction('⏪', user)
+                                        if page > 4:
+                                            page -= 4
+                                        else:
+                                            page = 0
+                                    await newsresult.edit(embed=navernewsembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색 정지]', fwhere_server=serverid_or_type)
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
