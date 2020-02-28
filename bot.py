@@ -762,7 +762,13 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
 
-            #elif message.content.startswith(prefix + '')
+            elif message.content.startswith(prefix + '//;'):
+                if cur.execute('select * from userdata where id=%s', message.author.id) == 1:
+                    checkmanager = cur.fetchall()
+                    if message.author.id in checkmanager[0]['id']:
+                        pass
+                else:
+                    errormsg('DB.IS_NOT_ONE_USER', serverid_or_type)
 
             elif message.content[len(prefix)] == '%': pass
 
