@@ -168,7 +168,7 @@ async def on_ready():
 
 @tasks.loop(seconds=5)
 async def tensecloop():
-    global ping, pinglevel, seclist, dbping
+    global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem
     try:
         ping = round(1000 * client.latency)
         if ping <= 100: pinglevel = '🔵 매우좋음'
@@ -181,8 +181,13 @@ async def tensecloop():
         dbip = config['dbIP']
         pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
         dbping = re.findall('\d+', pingcmd)[1]
-        if not str(globalmsg.author.id) in black:
-            if seclist.count(spamuser) >= 8:
+        temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
+        temp = temp[5:]
+        cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
+        cpulist = cpus.split('\n')[:-1]
+        mem = sshcmd('free -m')
+        if not globalmsg.author.id in black:
+            if seclist.count(spamuser) >= 5:
                 black.append(spamuser)
                 await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                 msglog(message.author.id, message.channel.id, message.content, '[차단됨. 사유: 명령어 도배]', fwhere_server=serverid_or_type)
@@ -207,7 +212,7 @@ async def on_message(message):
     # 일반 사용자 커맨드.
     if message.content.startswith(prefix):
         globalmsg = message
-        spamuser = str(message.author.id)
+        spamuser = message.author.id
         seclist.append(spamuser)
         def checkmsg(m):
             return m.channel == message.channel and m.author == message.author
@@ -215,11 +220,10 @@ async def on_message(message):
         # 등록 확인
         if userexist == 0:
             if message.content == prefix + '등록':
-                await message.channel.send(f'<@{message.author.id}>')
                 embed = discord.Embed(title=f'{botname} 등록', description='**연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=color['ask'], timestamp=datetime.datetime.utcnow())
                 embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
                 embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-                await message.channel.send(embed=embed)
+                await message.channel.send(content=f'<@{message.author.id}>', embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[등록: 이용약관 및 개인정보 취급방침의 동의]', fwhere_server=serverid_or_type) 
                 try:
                     msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
@@ -296,12 +300,7 @@ async def on_message(message):
                 except: dbalive = 'Closed'
                 else: dbalive = 'Alive'
 
-                temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
-                temp = temp[5:]
-                cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
-                cpulist = cpus.split('\n')[:-1]
-
-                mem = sshcmd('free -m')
+                
                 memlist = re.findall('\d+', mem)
                 memtotal, memused, memfree, membc, swaptotal, swapused, swapfree = memlist[0], memlist[1], memlist[2], memlist[4], memlist[6], memlist[7], memlist[8]
                 memrealfree = str(int(memfree) + int(membc))
@@ -762,6 +761,10 @@ async def on_message(message):
                                     await encyresult.edit(embed=naverencyembed(page, 4))
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
+
+            #elif message.content.startswith(prefix + '')
+
+            elif message.content[len(prefix)] == '%': pass
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
