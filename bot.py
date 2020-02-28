@@ -123,6 +123,20 @@ def naverSearch_book(text):
     else:
         return rescode
 
+def naverSearch_ency(text):
+    encText = urllib.parse.quote(text)
+    url = "https://openapi.naver.com/v1/search/encyc?query=" + encText + '&display=100'
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", naverapi_id)
+    request.add_header("X-Naver-Client-Secret", naverapi_secret)
+    response = urllib.request.urlopen(request)
+    rescode = response.getcode()
+    if rescode == 200:
+        results = json.load(response)
+        return results
+    else:
+        return rescode
+
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
@@ -242,8 +256,27 @@ async def on_message(message):
                 await message.channel.send('와!')
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
 
+            elif message.content == prefix + '도움':
+                helpstr_salmonbot = f"""\
+                    `{prefix}도움`: 전체 명령어를 확인합니다.
+                    `{prefix}정보`: 봇 정보를 확인합니다.
+                    `{prefix}핑`: 봇 지연시간을 확인합니다.
+                    `{prefix}서버상태 데이터서버`: 데이터서버의 CPU 점유율, 메모리 사용량 및 데이터베이스 연결 상태를 확인합니다.
+                    """
+                helpstr_naverapi = f"""\
+                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전) (검색어) [정확도순/최신순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
+                    """
+                embed=discord.Embed(title='전체 명령어', description='**`(소괄호)`는 반드시 입력해야 하는 부분, `[대괄호]`는 입력하지 않아도 되는 부분입니다.**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                embed.set_author(name=botname, icon_url=boticon)
+                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                embed.add_field(name='ㅤ\n연어봇', inline=False, value=helpstr_salmonbot)
+                embed.add_field(name='네이버 오픈 API', inline=False, value=helpstr_naverapi)
+                
+                await message.channel.send(embed=embed)
+                msglog(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
+            
             elif message.content == prefix + '정보':
-                embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['info'], timestamp=datetime.datetime.utcnow())
+                embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_thumbnail(url=thumbnail)
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -251,7 +284,7 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '핑':
-                embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+                embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
@@ -279,7 +312,7 @@ async def on_message(message):
                 swapusedpct = round((int(swapused) / int(swaptotal)) * 100)
                 swapbar = '|' + '▩' * swapbarusedpx + 'ㅤ' * (10 - swapbarusedpx) + '|'
 
-                embed=discord.Embed(title='🖥 데이터서버 상태', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['info'], timestamp=datetime.datetime.utcnow())
+                embed=discord.Embed(title='🖥 데이터서버 상태', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.add_field(name='CPU사용량', value=f'```  ALL: {cpulist[0]}%\nCPU 0: {cpulist[1]}%\nCPU 1: {cpulist[2]}%\nCPU 2: {cpulist[3]}%\nCPU 3: {cpulist[4]}%\nCPU 온도: {temp}```', inline=True)
                 embed.add_field(name='메모리 사용량', value=f'메모리\n```{membar}\n {memused}M/{memtotal}M ({memusedpct}%)```스왑 메모리\n```{swapbar}\n {swapused}M/{swaptotal}M ({swapusedpct}%)```', inline=True)
                 embed.set_author(name=botname, icon_url=boticon)
@@ -312,6 +345,8 @@ async def on_message(message):
                                         title = blogsc['items'][page*one+af]['title']
                                         link = blogsc['items'][page*one+af]['link']
                                         description = blogsc['items'][page*one+af]['description']
+                                        if description == '':
+                                            description = '(설명 없음)'
                                         bloggername = blogsc['items'][page*one+af]['bloggername']
                                         bloggerlink = blogsc['items'][page*one+af]['bloggerlink']
                                         postdate_year = int(blogsc['items'][page*one+af]['postdate'][0:4])
@@ -327,7 +362,14 @@ async def on_message(message):
                                 else: 
                                     if max100: allpage = 100//one
                                     else: allpage = (blogsc['total']-1)//one
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, 정확도순```", inline=False)
+                                builddateraw = blogsc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -413,6 +455,8 @@ async def on_message(message):
                                         title = newssc['items'][page*one+af]['title']
                                         originallink = newssc['items'][page*one+af]['link']
                                         description = newssc['items'][page*one+af]['description']
+                                        if description == '':
+                                            description = '(설명 없음)'
                                         pubdateraw = newssc['items'][page*one+af]['pubDate']
                                         pubdate = datetime.datetime.strptime(pubdateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
                                         if pubdate.strftime('%p') == 'AM':
@@ -430,7 +474,14 @@ async def on_message(message):
                                 else: 
                                     if max100: allpage = (100-1)//one
                                     else: allpage = (newssc['total']-1)//one
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, 정확도순```", inline=False)
+                                builddateraw = newssc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -541,7 +592,14 @@ async def on_message(message):
                                 else: 
                                     if max100: allpage = (100-1)//one
                                     else: allpage = (booksc['total']-1)//one
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, 정확도순```", inline=False)
+                                builddateraw = booksc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -600,6 +658,110 @@ async def on_message(message):
                                     await bookresult.edit(embed=naverbookembed(page, 4))
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색 정지]', fwhere_server=serverid_or_type)
+
+                elif message.content.startswith(prefix + '네이버검색 백과사전'):
+                    cmdlen = 10
+                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                        page = 0
+                        word = message.content[len(prefix)+1+cmdlen:]
+                        encysc = naverSearch_ency(word)
+                        if encysc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(encysc) == int:
+                            await message.channel.send(f'오류! 코드: {encysc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif encysc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
+                        else:
+                            for linenum in range(len(encysc['items'])):
+                                for encyreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    encysc['items'][linenum]['title'] = encysc['items'][linenum]['title'].replace(encyreplaces[0], encyreplaces[1])
+                                    encysc['items'][linenum]['description'] = encysc['items'][linenum]['description'].replace(encyreplaces[0], encyreplaces[1])
+                            def naverencyembed(pg, one=4):
+                                embed=discord.Embed(title=f'🔍📚 네이버 백과사전 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    if page*one+af+1 <= encysc['total']:
+                                        title = encysc['items'][page*one+af]['title']
+                                        link = encysc['items'][page*one+af]['link']
+                                        description = encysc['items'][page*one+af]['description']
+                                        if description == '':
+                                            description = '(설명 없음)'
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
+                                    else:
+                                        break
+                                if encysc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if encysc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = (100-1)//one
+                                    else: allpage = (encysc['total']-1)//one
+                                builddateraw = encysc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {encysc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            
+                            if encysc['total'] < 4: encyallpage = 0
+                            else: 
+                                if encysc['total'] > 100: encyallpage = (100-1)//4
+                                else: encyallpage = (encysc['total']-1)//4
+                            
+                            encyresult = await message.channel.send(embed=naverencyembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await encyresult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색]', fwhere_server=serverid_or_type)
+                            def naverencycheck(reaction, user):
+                                return user == message.author and encyresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverencycheck)
+                                except asyncio.TimeoutError:
+                                    await encyresult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        print('s')
+                                        await encyresult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await encyresult.remove_reaction('▶', user)
+                                        if page < encyallpage:
+                                            page += 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '◀':
+                                        await encyresult.remove_reaction('◀', user)
+                                        if page > 0: 
+                                            page -= 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '⏩':
+                                        await encyresult.remove_reaction('⏩', user)
+                                        if page < encyallpage-4:
+                                            page += 4
+                                        elif page == encyallpage:
+                                            continue
+                                        else:
+                                            page = encyallpage
+                                    if reaction.emoji == '⏪':
+                                        await encyresult.remove_reaction('⏪', user)
+                                        if page > 4:
+                                            page -= 4
+                                        elif page == 0:
+                                            continue
+                                        else:
+                                            page = 0
+                                    await encyresult.edit(embed=naverencyembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
 
             else:
                 embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())

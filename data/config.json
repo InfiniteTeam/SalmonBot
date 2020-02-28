@@ -12,7 +12,7 @@
     "botIconUrl": "http://salmon.arpa.kro.kr",
     "thumbnailUrl": "https://k.kakaocdn.net/dn/omoP0/btqB0fNhk6Q/a98du2XtKUkOISuUMPjIT1/icon.png?attach=1&knm=img.png",
     "color": {
-        "default": "0xff8040",
+        "salmon": "0xff8040",
         "info": "0x00d8ff",
         "warn": "0xffe400",
         "error": "0xff0000",
