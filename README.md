@@ -1,7 +1,7 @@
 # SalmonBot
 연어봇 - SalmonBot
 
-All in One.
+Everything on the web, in Discord.
 
 Introduce
 --
