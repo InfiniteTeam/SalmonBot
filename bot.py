@@ -81,51 +81,9 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 naverapi_id = openapi['naver']['clientID']
 naverapi_secret = openapi['naver']['clientSec']
 
-def naverSearch_blog(text):
+def naverSearch(text, code, sort):
     encText = urllib.parse.quote(text)
-    url = "https://openapi.naver.com/v1/search/blog?query=" + encText + '&display=100'
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", naverapi_id)
-    request.add_header("X-Naver-Client-Secret", naverapi_secret)
-    response = urllib.request.urlopen(request)
-    rescode = response.getcode()
-    if rescode == 200:
-        results = json.load(response)
-        return results
-    else:
-        return rescode
-
-def naverSearch_news(text):
-    encText = urllib.parse.quote(text)
-    url = "https://openapi.naver.com/v1/search/news?query=" + encText + '&display=100'
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", naverapi_id)
-    request.add_header("X-Naver-Client-Secret", naverapi_secret)
-    response = urllib.request.urlopen(request)
-    rescode = response.getcode()
-    if rescode == 200:
-        results = json.load(response)
-        return results
-    else:
-        return rescode
-
-def naverSearch_book(text):
-    encText = urllib.parse.quote(text)
-    url = "https://openapi.naver.com/v1/search/book?query=" + encText + '&display=100'
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", naverapi_id)
-    request.add_header("X-Naver-Client-Secret", naverapi_secret)
-    response = urllib.request.urlopen(request)
-    rescode = response.getcode()
-    if rescode == 200:
-        results = json.load(response)
-        return results
-    else:
-        return rescode
-
-def naverSearch_ency(text):
-    encText = urllib.parse.quote(text)
-    url = "https://openapi.naver.com/v1/search/encyc?query=" + encText + '&display=100'
+    url = f"https://openapi.naver.com/v1/search/{code}?query={encText}&display=100&sort={sort}"
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", naverapi_id)
     request.add_header("X-Naver-Client-Secret", naverapi_secret)
@@ -211,6 +169,10 @@ async def on_message(message):
     
     # 일반 사용자 커맨드.
     if message.content.startswith(prefix):
+        if config['inspection'] == True:
+            if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 0:
+                await message.channel.send('현재 점검중이거나, 기능 추가 중입니다. 안정적인 봇 이용을 위해 잠시 기다려주세요.')
+                return
         globalmsg = message
         spamuser = message.author.id
         seclist.append(spamuser)
@@ -242,7 +204,7 @@ async def on_message(message):
                             await message.channel.send('이미 등록된 사용자입니다.')
                             msglog(message.author.id, message.channel.id, message.content, '[등록: 이미 등록됨]', fwhere_server=serverid_or_type)
                     else:
-                        await message.channel.send('취소되었습니다. 정확히 `등록`를 입력해주세요!')
+                        await message.channel.send('취소되었습니다. 정확히 `동의`를 입력해주세요!')
                         msglog(message.author.id, message.channel.id, message.content, '[등록: 취소됨]', fwhere_server=serverid_or_type)
             else:
                 embed=discord.Embed(title='❔ 미등록 사용자', description=f'**등록되어 있지 않은 사용자입니다!**\n`{prefix}등록`명령을 입력해서, 약관에 동의해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
@@ -295,7 +257,8 @@ async def on_message(message):
                     `{prefix}서버상태 데이터서버`: 데이터서버의 CPU 점유율, 메모리 사용량 및 데이터베이스 연결 상태를 확인합니다.
                     """
                 helpstr_naverapi = f"""\
-                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전) (검색어) [정확도순/최신순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
+                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전) (검색어) [&&최신순/&&정확도순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
+                     -사용예: `네이버검색 백과사전 파이썬 &&최신순`
                     """
                 embed=discord.Embed(title='전체 명령어', description='**`(소괄호)`는 반드시 입력해야 하는 부분, `[대괄호]`는 입력하지 않아도 되는 부분입니다.**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
@@ -347,18 +310,32 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[서버상태 데이터서버]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '네이버검색'):
-                if message.content.startswith(prefix + '네이버검색 블로그'):
+                searchstr = message.content
+                if searchstr[-6:] == ' &&최신순':
+                    naversort = '최신순'
+                    naversortcode = 'date'
+                    searchstr = searchstr[:-6]
+                elif searchstr[-7:] == ' &&정확도순':
+                    naversort = '정확도순'
+                    naversortcode = 'sim'
+                    searchstr = searchstr[:-7]
+                else:
+                    naversort = '정확도순'
+                    naversortcode = 'sim'
+                if searchstr.startswith(prefix + '네이버검색 블로그'):
                     cmdlen = 9
-                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = message.content[len(prefix)+1+cmdlen:]
-                        blogsc = naverSearch_blog(word)
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        blogsc = naverSearch(word, 'blog', naversortcode)
                         if blogsc == 429:
                             await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
                         elif type(blogsc) == int:
                             await message.channel.send(f'오류! 코드: {blogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif blogsc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
                         else:
                             for linenum in range(len(blogsc['items'])):
                                 for blogreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
@@ -386,7 +363,7 @@ async def on_message(message):
                                 else: max100 = ''
                                 if blogsc['total'] < one: allpage = 0
                                 else: 
-                                    if max100: allpage = 100//one
+                                    if max100: allpage = (100-1)//one
                                     else: allpage = (blogsc['total']-1)//one
                                 builddateraw = blogsc['lastBuildDate']
                                 builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
@@ -395,7 +372,7 @@ async def on_message(message):
                                 elif builddate.strftime('%p') == 'PM':
                                     builddayweek = '오후'
                                 buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -455,12 +432,12 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색 정지]', fwhere_server=serverid_or_type)
 
-                elif message.content.startswith(prefix + '네이버검색 뉴스'):
+                elif searchstr.startswith(prefix + '네이버검색 뉴스'):
                     cmdlen = 8
-                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = message.content[len(prefix)+1+cmdlen:]
-                        newssc = naverSearch_news(word)
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        newssc = naverSearch(word, 'news', naversortcode)
                         if newssc == 429:
                             await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
@@ -507,7 +484,7 @@ async def on_message(message):
                                 elif builddate.strftime('%p') == 'PM':
                                     builddayweek = '오후'
                                 buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -567,12 +544,12 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색 정지]', fwhere_server=serverid_or_type)
 
-                elif message.content.startswith(prefix + '네이버검색 책'):
+                elif searchstr.startswith(prefix + '네이버검색 책'):
                     cmdlen = 7
-                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = message.content[len(prefix)+1+cmdlen:]
-                        booksc = naverSearch_book(word)
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        booksc = naverSearch(word, 'book', naversortcode)
                         if booksc == 429:
                             await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
@@ -625,7 +602,7 @@ async def on_message(message):
                                 elif builddate.strftime('%p') == 'PM':
                                     builddayweek = '오후'
                                 buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -685,12 +662,12 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색 정지]', fwhere_server=serverid_or_type)
 
-                elif message.content.startswith(prefix + '네이버검색 백과사전'):
+                elif searchstr.startswith(prefix + '네이버검색 백과사전'):
                     cmdlen = 10
-                    if len(prefix + message.content) >= len(prefix)+1+cmdlen and message.content[1+cmdlen] == ' ':
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = message.content[len(prefix)+1+cmdlen:]
-                        encysc = naverSearch_ency(word)
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        encysc = naverSearch(word, 'ency', naversortcode)
                         if encysc == 429:
                             await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
@@ -729,7 +706,7 @@ async def on_message(message):
                                 elif builddate.strftime('%p') == 'PM':
                                     builddayweek = '오후'
                                 buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {encysc['total']}건{max100}, 정확도순\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {encysc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 return embed
@@ -790,9 +767,8 @@ async def on_message(message):
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '//;'):
-                if cur.execute('select * from userdata where id=%s', message.author.id) == 1:
-                    checkmanager = cur.fetchall()
-                    if message.author.id in checkmanager[0]['id']:
+                if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
+                    if message.content == prefix + '//;execute':
                         pass
                 else:
                     errormsg('DB.IS_NOT_ONE_USER', serverid_or_type)

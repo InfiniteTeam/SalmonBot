@@ -3,6 +3,7 @@
     "prefix": "%",
     "activity": "연어봇 - %도움",
     "status": "dnd",
+    "inspection": true,
     "tokenFileName": "token.txt",
     "maxlogbytes": 52428800,
     "dbacName": "dbac.json",
