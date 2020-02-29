@@ -242,7 +242,7 @@ async def on_message(message):
                             await message.channel.send('이미 등록된 사용자입니다.')
                             msglog(message.author.id, message.channel.id, message.content, '[등록: 이미 등록됨]', fwhere_server=serverid_or_type)
                     else:
-                        await message.channel.send('취소되었습니다.')
+                        await message.channel.send('취소되었습니다. 정확히 `등록`를 입력해주세요!')
                         msglog(message.author.id, message.channel.id, message.content, '[등록: 취소됨]', fwhere_server=serverid_or_type)
             else:
                 embed=discord.Embed(title='❔ 미등록 사용자', description=f'**등록되어 있지 않은 사용자입니다!**\n`{prefix}등록`명령을 입력해서, 약관에 동의해주세요.', color=color['error'], timestamp=datetime.datetime.utcnow())
@@ -259,6 +259,33 @@ async def on_message(message):
             elif message.content == prefix + '샌즈':
                 await message.channel.send('와!')
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
+
+            elif message.content == prefix + '탈퇴':
+                embed = discord.Embed(title=f'{botname} 탈퇴',
+                description='''**연어봇 이용약관 및 개인정보 취급방침 동의를 철회하고, 연어봇을 탈퇴하게 됩니다.**
+                이 경우 _사용자님의 모든 데이터(개인정보 취급방침을 참조하십시오)_가 연어봇에서 삭제되며, __되돌릴 수 없습니다.__
+                계속하시려면 `탈퇴`를 입력하십시오.''', color=color['warn'], timestamp=datetime.datetime.utcnow())
+                embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
+                embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
+                await message.channel.send(content=f'<@{message.author.id}>', embed=embed)
+                msglog(message.author.id, message.channel.id, message.content, '[탈퇴: 사용자 탈퇴]', fwhere_server=serverid_or_type)
+                try:
+                    msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
+                except asyncio.TimeoutError:
+                    await message.channel.send('시간이 초과되었습니다.')
+                    msglog(message.author.id, message.channel.id, message.content, '[탈퇴: 시간 초과]', fwhere_server=serverid_or_type)
+                else:
+                    if msg.content == '탈퇴':
+                        if cur.execute('select * from userdata where id=%s', message.author.id) == 1:
+                            cur.execute('delete from userdata where id=%s', message.author.id)
+                            db.commit()
+                            await message.channel.send('탈퇴되었으며 모든 사용자 데이터가 삭제되었습니다.')
+                            msglog(msg.author.id, msg.channel.id, msg.content, '[탈퇴: 완료]', fwhere_server=serverid_or_type)
+                        else:
+                            await message.channel.send('오류! 이미 탈퇴된 사용자입니다.')
+                            msglog(msg.author.id, msg.channel.id, msg.content, '[탈퇴: 이미 탈퇴됨]', fwhere_server=serverid_or_type)
+                    else:
+                        await message.channel.send('취소되었습니다. 정확히 `탈퇴`를 입력해주세요!')
 
             elif message.content == prefix + '도움':
                 helpstr_salmonbot = f"""\
