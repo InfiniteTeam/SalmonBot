@@ -219,6 +219,7 @@ async def on_message(message):
             elif message.content == prefix + '블랙':
                 await message.channel.send(str(black))
             elif message.content == prefix + '샌즈':
+                print(message.author.voice.channel)
                 await message.channel.send('와!')
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
 
@@ -397,7 +398,6 @@ async def on_message(message):
                                     break
                                 else:
                                     if reaction.emoji == '⏹':
-                                        print('s')
                                         await blogresult.clear_reactions()
                                         break
                                     if reaction.emoji == '▶':
@@ -509,7 +509,6 @@ async def on_message(message):
                                     break
                                 else:
                                     if reaction.emoji == '⏹':
-                                        print('s')
                                         await newsresult.clear_reactions()
                                         break
                                     if reaction.emoji == '▶':
@@ -627,7 +626,6 @@ async def on_message(message):
                                     break
                                 else:
                                     if reaction.emoji == '⏹':
-                                        print('s')
                                         await bookresult.clear_reactions()
                                         break
                                     if reaction.emoji == '▶':
@@ -731,7 +729,6 @@ async def on_message(message):
                                     break
                                 else:
                                     if reaction.emoji == '⏹':
-                                        print('s')
                                         await encyresult.clear_reactions()
                                         break
                                     if reaction.emoji == '▶':
@@ -766,12 +763,128 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
 
-            elif message.content.startswith(prefix + '//;'):
+                elif searchstr.startswith(prefix + '네이버검색 영화'):
+                    cmdlen = 8
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                        page = 0
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        moviesc = naverSearch(word, 'movie', naversortcode)
+                        if moviesc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(moviesc) == int:
+                            await message.channel.send(f'오류! 코드: {moviesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif moviesc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
+                        else:
+                            for linenum in range(len(moviesc['items'])):
+                                for moviereplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    moviesc['items'][linenum]['title'] = moviesc['items'][linenum]['title'].replace(moviereplaces[0], moviereplaces[1])
+                            def navermovieembed(pg, one=4):
+                                embed=discord.Embed(title=f'🔍📰 네이버 영화 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    if page*one+af+1 <= moviesc['total']:
+                                        title = moviesc['items'][page*one+af]['title']
+                                        link = moviesc['items'][page*one+af]['link']
+                                        subtitle = moviesc['items'][page*one+af]['subtitle']
+                                        pubdate = moviesc['items'][page*one+af]['pubDate']
+                                        director = moviesc['items'][page*one+af]['director'].replace('|', ', ')[:-2]
+                                        actor = moviesc['items'][page*one+af]['actor'].replace('|', ', ')[:-2]
+                                        userrating = moviesc['items'][page*one+af]['userRating']
+                                        userratingbar = ('★' * round(float(userrating)/2)) + ('☆' * (5-round(float(userrating)/2)))
+
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})** ({subtitle})\n`{userratingbar} {userrating}`\n감독: {director} | 출연: {actor} | {pubdate}", inline=False)
+                                    else:
+                                        break
+                                if moviesc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if moviesc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = (100-1)//one
+                                    else: allpage = (moviesc['total']-1)//one
+                                builddateraw = moviesc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {moviesc['total']}건{max100}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            
+                            if moviesc['total'] < 4: movieallpage = 0
+                            else: 
+                                if moviesc['total'] > 100: movieallpage = (100-1)//4
+                                else: movieallpage = (moviesc['total']-1)//4
+                            
+                            movieresult = await message.channel.send(embed=navermovieembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await movieresult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색]', fwhere_server=serverid_or_type)
+                            def navermoviecheck(reaction, user):
+                                return user == message.author and movieresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navermoviecheck)
+                                except asyncio.TimeoutError:
+                                    await movieresult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        await movieresult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await movieresult.remove_reaction('▶', user)
+                                        if page < movieallpage:
+                                            page += 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '◀':
+                                        await movieresult.remove_reaction('◀', user)
+                                        if page > 0: 
+                                            page -= 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '⏩':
+                                        await movieresult.remove_reaction('⏩', user)
+                                        if page < movieallpage-4:
+                                            page += 4
+                                        elif page == movieallpage:
+                                            continue
+                                        else:
+                                            page = movieallpage
+                                    if reaction.emoji == '⏪':
+                                        await movieresult.remove_reaction('⏪', user)
+                                        if page > 4:
+                                            page -= 4
+                                        elif page == 0:
+                                            continue
+                                        else:
+                                            page = 0
+                                    await movieresult.edit(embed=navermovieembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]', fwhere_server=serverid_or_type)
+
+            elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
-                    if message.content == prefix + '//;execute':
-                        pass
-                else:
-                    errormsg('DB.IS_NOT_ONE_USER', serverid_or_type)
+                    if message.content == prefix + '//i t':
+                        config['inspection'] = True
+                        await message.channel.send('관리자 외 사용제한 켜짐.')
+                        print(config['inspection'])
+                    elif message.content == prefix + '//i f':
+                        config['inspection'] = False
+                        await message.channel.send('관리자 외 사용제한 꺼짐.')
+                        print(config['inspection'])
+                    elif message.content.startswith(prefix + '//exec'):
+                        exec(message.content[len(prefix)+7:])
+                    elif message.content.startswith(prefix + '//eval'):
+                        eval(message.content[len(prefix)+7:])
+                    elif message.content.startswith(prefix + '//await'):
+                        await eval(message.content[len(prefix)+8:])
 
             elif message.content[len(prefix)] == '%': pass
 
@@ -804,5 +917,9 @@ def errormsg(error, where='idk'):
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[존재하지 않는 명령어입니다!]', fwhere_server=where)
+
+def saveconfig():
+    with open('./data/config.json', 'w', encoding='utf-8') as config_save:
+        json.dump(config, config_save, indent=4)
 
 client.run(token)
