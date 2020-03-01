@@ -166,6 +166,8 @@ async def on_message(message):
     # 서버인지 아닌지 확인
     if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type
     else: serverid_or_type = message.guild.id
+    # 권한 확인
+    myperms = message.channel.permissions_for(message.guild.get_member(client.user.id))
     
     # 일반 사용자 커맨드.
     if message.content.startswith(prefix):
@@ -219,7 +221,13 @@ async def on_message(message):
             elif message.content == prefix + '블랙':
                 await message.channel.send(str(black))
             elif message.content == prefix + '샌즈':
-                print(message.author.voice.channel)
+                for vs in message.guild.voice_channels:
+                    if message.author in vs.members:
+                        vsuserin = vs
+                        break
+                v = await vsuserin.connect()
+                time.sleep(5)
+                await v.disconnect()
                 await message.channel.send('와!')
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
 
@@ -259,6 +267,7 @@ async def on_message(message):
                     """
                 helpstr_naverapi = f"""\
                     `{prefix}네이버검색 (블로그/뉴스/책/백과사전) (검색어) [&&최신순/&&정확도순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
+                    `{prefix}네이버검색 (영화) (검색어)`: 네이버 검색 API를 사용해 영화 등을 최대 100건까지 검색합니다.
                      -사용예: `네이버검색 백과사전 파이썬 &&최신순`
                     """
                 embed=discord.Embed(title='전체 명령어', description='**`(소괄호)`는 반드시 입력해야 하는 부분, `[대괄호]`는 입력하지 않아도 되는 부분입니다.**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
@@ -284,6 +293,54 @@ async def on_message(message):
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
+
+            elif message.content == prefix + '봇권한':
+                if type(serverid_or_type) == int:
+                    botperm_section1 = f"""\
+                        초대 만들기: `{myperms.create_instant_invite}`
+                        사용자 추방: `{myperms.kick_members}`
+                        사용자 차단: `{myperms.ban_members}`
+                        관리자 권한: `{myperms.administrator}`
+                        채널 관리: `{myperms.manage_channels}`
+                        서버 관리: `{myperms.manage_guild}`
+                        반응 추가: `{myperms.add_reactions}`
+                        감사 로그 보기: `{myperms.view_audit_log}`
+                        우선 발언권: `{myperms.priority_speaker}`
+                        음성 채널에서 방송: `{myperms.stream}`
+                        메시지 보기: `{myperms.read_messages}`
+                        메시지 전송: `{myperms.send_messages}`
+                        TTS 메시지 전송: `{myperms.send_tts_messages}`
+                        메시지 관리: `{myperms.manage_messages}`
+                        파일 전송: `{myperms.attach_files}`
+                        
+                        """
+                    botperm_section2 = f"""\
+                        메시지 기록 보기: `{myperms.read_message_history}`
+                        `@everyone` 멘션: `{myperms.mention_everyone}`
+                        확장 이모지: `{myperms.external_emojis}`
+                        길드 정보 보기: `{myperms.view_guild_insights}`
+                        음성 채널 연결: `{myperms.connect}`
+                        음성 채널에서 발언: `{myperms.speak}`
+                        다른 멤버 마이크 음소거: `{myperms.mute_members}`
+                        다른 멤버 헤드폰 음소거: `{myperms.deafen_members}`
+                        다른 음성 채널로 멤버 옮기기: `{myperms.move_members}`
+                        음성 감지 사용: `{myperms.use_voice_activation}`
+                        내 닉네임 변경: `{myperms.change_nickname}`
+                        다른 멤버 닉네임 변경: `{myperms.manage_nicknames}`
+                        역할 관리: `{myperms.manage_roles}`
+                        권한 관리: `{myperms.manage_permissions}`
+                        웹훅 관리: `{myperms.manage_webhooks}`
+                        이모지 관리: `{myperms.manage_emojis}`
+                        """
+                    embed=discord.Embed(title='🔐 연어봇 권한', description='현재 서버에서 연어봇이 가진 권한입니다.', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                    embed.set_author(name=botname, icon_url=boticon)
+                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                    embed.add_field(name='ㅤ', value=botperm_section1)
+                    embed.add_field(name='ㅤ', value=botperm_section2)
+                    await message.channel.send(embed=embed)
+                    msglog(message.author.id, message.channel.id, message.content, '[봇권한]', fwhere_server=serverid_or_type)
+                else:
+                    await message.channel.send(embed=onlyguild(where=serverid_or_type))
 
             elif message.content == prefix + '서버상태 데이터서버':
                 dbalive = None
@@ -665,7 +722,7 @@ async def on_message(message):
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
                         word = searchstr[len(prefix)+1+cmdlen:]
-                        encysc = naverSearch(word, 'ency', naversortcode)
+                        encysc = naverSearch(word, 'encyc', naversortcode)
                         if encysc == 429:
                             await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
@@ -885,6 +942,8 @@ async def on_message(message):
                         eval(message.content[len(prefix)+7:])
                     elif message.content.startswith(prefix + '//await'):
                         await eval(message.content[len(prefix)+8:])
+                    elif message.content == prefix + '//p':
+                        print(message.channel.permissions_for(message.author).manage_guild)
 
             elif message.content[len(prefix)] == '%': pass
 
@@ -896,8 +955,7 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어]', fwhere_server=serverid_or_type)
         
         else:
-            errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type)
-            await globalmsg.channel.send(embed=embed)
+            await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
             
 
 # 메시지 로그 출력기 - 
@@ -917,9 +975,13 @@ def errormsg(error, where='idk'):
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[존재하지 않는 명령어입니다!]', fwhere_server=where)
+    return embed
 
-def saveconfig():
-    with open('./data/config.json', 'w', encoding='utf-8') as config_save:
-        json.dump(config, config_save, indent=4)
+def onlyguild(where='idk'):
+    embed=discord.Embed(title='**❌ 서버에서만 사용 가능한 명령입니다!**', description='DM이나 그룹 메시지에서는 사용할 수 없어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    embed.set_author(name=botname, icon_url=boticon)
+    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
+    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=where)
+    return embed
 
 client.run(token)
