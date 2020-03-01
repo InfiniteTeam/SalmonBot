@@ -1068,6 +1068,14 @@ async def on_message(message):
                         await eval(message.content[len(prefix)+8:])
                     elif message.content == prefix + '//p':
                         print(message.channel.permissions_for(message.author).manage_guild)
+                    elif message.content.startswith(prefix + '//noti '):
+                        cmdlen = 8
+                        print(cur.execute('select * from serverdata where noticechannel is not NULL'))
+                        servers = cur.fetchall()
+                        notisend = await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
+                        for notichannel in servers:
+                            await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
+                        await message.channel.send('공지 전송 완료.')
 
             elif message.content[len(prefix)] == '%': pass
 
