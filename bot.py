@@ -216,18 +216,41 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[미등록 사용자]', fwhere_server=serverid_or_type)
 
         elif userexist == 1: # 일반 사용자 명령어
+            if cur.execute('select * from serverdata where id=%s', message.guild.id) == 0: # 서버 자동 등록 및 공지채널 자동 찾기.
+                def search_noticechannel(): # 공지 및 봇 관련된 단어가 포함되어 있고 메시지 보내기 권한이 있는 채널을 찾음, 없으면 메시지 보내기 권한이 있는 맨 위 채널로 선택.
+                    noticech = []
+                    freechannel = None
+                    for channel in message.guild.text_channels:
+                        if channel.permissions_for(message.guild.get_member(client.user.id)).send_messages:
+                            freechannel = channel
+                            if '공지' in channel.name and '봇' in channel.name:
+                                noticech.append(channel)
+                                break
+                            elif 'noti' in channel.name.lower() and 'bot' in channel.name.lower():
+                                noticech.append(channel)
+                                break
+                            elif '공지' in channel.name:
+                                noticech.append(channel)
+                            elif 'noti' in channel.name.lower():
+                                noticech.append(channel)
+                            elif '봇' in channel.name:
+                                noticech.append(channel)
+                            elif 'bot' in channel.name.lower():
+                                noticech.append(channel)
+                    if noticech == []:
+                        noticech.append(freechannel)
+
+                    return noticech[0]
+                    
+                cur.execute('insert into serverdata values (%s, %s)', (message.guild.id, search_noticechannel().id))
+                db.commit()
             if message.content == prefix + '등록':
                 await message.channel.send('이미 등록된 사용자입니다!')
             elif message.content == prefix + '블랙':
                 await message.channel.send(str(black))
             elif message.content == prefix + '샌즈':
-                for vs in message.guild.voice_channels:
-                    if message.author in vs.members:
-                        vsuserin = vs
-                        break
-                v = await vsuserin.connect()
-                time.sleep(5)
-                await v.disconnect()
+                for ch in message.guild.text_channels:
+                    print()
                 await message.channel.send('와!')
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
 
@@ -414,7 +437,7 @@ async def on_message(message):
                                         postdate_month = int(blogsc['items'][page*one+af]['postdate'][4:6])
                                         postdate_day = int(blogsc['items'][page*one+af]['postdate'][6:8])
                                         postdate = f'{postdate_year}년 {postdate_month}월 {postdate_day}일'
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- [*{bloggername}*]({bloggerlink}) / **{postdate}**", inline=False)
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{bloggername}]({bloggerlink})* / **{postdate}**", inline=False)
                                     else:
                                         break
                                 if blogsc['total'] > 100: max100 = ' 중 상위 100건'
@@ -921,6 +944,111 @@ async def on_message(message):
                                     await movieresult.edit(embed=navermovieembed(page, 4))
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]', fwhere_server=serverid_or_type)
+
+                if searchstr.startswith(prefix + '네이버검색 카페글'):
+                    cmdlen = 9
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                        page = 0
+                        word = searchstr[len(prefix)+1+cmdlen:]
+                        cafesc = naverSearch(word, 'cafearticle', naversortcode)
+                        if cafesc == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                        elif type(cafesc) == int:
+                            await message.channel.send(f'오류! 코드: {cafesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                        elif cafesc['total'] == 0:
+                            await message.channel.send('검색 결과가 없습니다!')
+                        else:
+                            for linenum in range(len(cafesc['items'])):
+                                for cafereplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
+                                    cafesc['items'][linenum]['title'] = cafesc['items'][linenum]['title'].replace(cafereplaces[0], cafereplaces[1])
+                                    cafesc['items'][linenum]['description'] = cafesc['items'][linenum]['description'].replace(cafereplaces[0], cafereplaces[1])
+                            def navercafeembed(pg, one):
+                                embed=discord.Embed(title=f'🔍☕ 네이버 카페글 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
+                                for af in range(one):
+                                    if page*one+af+1 <= cafesc['total']:
+                                        title = cafesc['items'][page*one+af]['title']
+                                        link = cafesc['items'][page*one+af]['link']
+                                        description = cafesc['items'][page*one+af]['description']
+                                        if description == '':
+                                            description = '(설명 없음)'
+                                        cafename = cafesc['items'][page*one+af]['cafename']
+                                        cafeurl = cafesc['items'][page*one+af]['cafeurl']
+                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{cafename}]({cafeurl})*", inline=False)
+                                    else:
+                                        break
+                                if cafesc['total'] > 100: max100 = ' 중 상위 100건'
+                                else: max100 = ''
+                                if cafesc['total'] < one: allpage = 0
+                                else: 
+                                    if max100: allpage = (100-1)//one
+                                    else: allpage = (cafesc['total']-1)//one
+                                builddateraw = cafesc['lastBuildDate']
+                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+                                if builddate.strftime('%p') == 'AM':
+                                    builddayweek = '오전'
+                                elif builddate.strftime('%p') == 'PM':
+                                    builddayweek = '오후'
+                                buildhour12 = builddate.strftime('%I')
+                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {cafesc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                return embed
+                            
+                            if cafesc['total'] < 4: cafeallpage = 0
+                            else: 
+                                if cafesc['total'] > 100: cafeallpage = (100-1)//4
+                                else: cafeallpage = (cafesc['total']-1)//4
+
+                            caferesult = await message.channel.send(embed=navercafeembed(page, 4))
+                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await caferesult.add_reaction(emoji)
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 카페글검색]', fwhere_server=serverid_or_type)
+                            def navercafecheck(reaction, user):
+                                return user == message.author and caferesult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            while True:
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercafecheck)
+                                except asyncio.TimeoutError:
+                                    await caferesult.clear_reactions()
+                                    break
+                                else:
+                                    if reaction.emoji == '⏹':
+                                        await caferesult.clear_reactions()
+                                        break
+                                    if reaction.emoji == '▶':
+                                        await caferesult.remove_reaction('▶', user)
+                                        if page < cafeallpage:
+                                            page += 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '◀':
+                                        await caferesult.remove_reaction('◀', user)
+                                        if page > 0: 
+                                            page -= 1
+                                        else:
+                                            continue
+                                    if reaction.emoji == '⏩':
+                                        await caferesult.remove_reaction('⏩', user)
+                                        if page < cafeallpage-4:
+                                            page += 4
+                                        elif page == cafeallpage:
+                                            continue
+                                        else:
+                                            page = cafeallpage
+                                    if reaction.emoji == '⏪':
+                                        await caferesult.remove_reaction('⏪', user)
+                                        if page > 4:
+                                            page -= 4
+                                        elif page == 0:
+                                            continue
+                                        else:
+                                            page = 0
+                                    await caferesult.edit(embed=navercafeembed(page, 4))
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 카페글검색 정지]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
