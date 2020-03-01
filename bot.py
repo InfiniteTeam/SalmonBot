@@ -619,10 +619,6 @@ async def on_message(message):
                                 for bookreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
                                     booksc['items'][linenum]['title'] = booksc['items'][linenum]['title'].replace(bookreplaces[0], bookreplaces[1])
                                     booksc['items'][linenum]['description'] = booksc['items'][linenum]['description'].replace(bookreplaces[0], bookreplaces[1])
-                                '''
-                                for bookreplaces in [['`', ''], ['&quot;', ''], ['&lsquo;', ''], ['&rsquo;', ''], ['<b>', ''], ['</b>', '']]:
-                                    booksc['items'][linenum]['description'] = booksc['items'][linenum]['description'].replace(bookreplaces[0], bookreplaces[1])
-                                '''
                                 booksc['items'][linenum]['author'] = booksc['items'][linenum]['author'].replace('|', ', ')
                             def naverbookembed(pg, one=4):
                                 embed=discord.Embed(title=f'🔍📗 네이버 책 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
