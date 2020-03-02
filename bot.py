@@ -14,6 +14,8 @@ import paramiko
 import re
 import os
 import urllib.request
+import salmonext.naver_search
+import salmonext.pagecontrol
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -80,20 +82,6 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 # =============== NAVER Open API ===============
 naverapi_id = openapi['naver']['clientID']
 naverapi_secret = openapi['naver']['clientSec']
-
-def naverSearch(text, code, sort):
-    encText = urllib.parse.quote(text)
-    url = f"https://openapi.naver.com/v1/search/{code}?query={encText}&display=100&sort={sort}"
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", naverapi_id)
-    request.add_header("X-Naver-Client-Secret", naverapi_secret)
-    response = urllib.request.urlopen(request)
-    rescode = response.getcode()
-    if rescode == 200:
-        results = json.load(response)
-        return results
-    else:
-        return rescode
 
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
@@ -390,7 +378,12 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[서버상태 데이터서버]', fwhere_server=serverid_or_type)
 
+            elif message.content == prefix + '공지채널':
+                embed=discord.Embed(title='🖥 데이터서버 상태', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+
             elif message.content.startswith(prefix + '네이버검색'):
+                def navercheck(reaction, user):
+                    return user == message.author and naverresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                 searchstr = message.content
                 if searchstr[-6:] == ' &&최신순':
                     naversort = '최신순'
@@ -407,648 +400,163 @@ async def on_message(message):
                     cmdlen = 9
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        blogsc = naverSearch(word, 'blog', naversortcode)
-                        if blogsc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(blogsc) == int:
-                            await message.channel.send(f'오류! 코드: {blogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif blogsc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
+                        query = searchstr[len(prefix)+1+cmdlen:]
+                        try:
+                            naverblogsc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
+                        except Exception as ex:
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
-                            for linenum in range(len(blogsc['items'])):
-                                for blogreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    blogsc['items'][linenum]['title'] = blogsc['items'][linenum]['title'].replace(blogreplaces[0], blogreplaces[1])
-                                    blogsc['items'][linenum]['description'] = blogsc['items'][linenum]['description'].replace(blogreplaces[0], blogreplaces[1])
-                            def naverblogembed(pg, one):
-                                embed=discord.Embed(title=f'🔍📝 네이버 블로그 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= blogsc['total']:
-                                        title = blogsc['items'][page*one+af]['title']
-                                        link = blogsc['items'][page*one+af]['link']
-                                        description = blogsc['items'][page*one+af]['description']
-                                        if description == '':
-                                            description = '(설명 없음)'
-                                        bloggername = blogsc['items'][page*one+af]['bloggername']
-                                        bloggerlink = blogsc['items'][page*one+af]['bloggerlink']
-                                        postdate_year = int(blogsc['items'][page*one+af]['postdate'][0:4])
-                                        postdate_month = int(blogsc['items'][page*one+af]['postdate'][4:6])
-                                        postdate_day = int(blogsc['items'][page*one+af]['postdate'][6:8])
-                                        postdate = f'{postdate_year}년 {postdate_month}월 {postdate_day}일'
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{bloggername}]({bloggerlink})* / **{postdate}**", inline=False)
-                                    else:
-                                        break
-                                if blogsc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if blogsc['total'] < one: allpage = 0
+                            if naverblogsc == 429:
+                                await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                            elif type(naverblogsc) == int:
+                                await message.channel.send(f'오류! 코드: {naverblogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                            elif naverblogsc['total'] == 0:
+                                await message.channel.send('검색 결과가 없습니다!')
+                            else:
+                                
+                                if naverblogsc['total'] < 4: naverblogallpage = 0
                                 else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (blogsc['total']-1)//one
-                                builddateraw = blogsc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {blogsc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if blogsc['total'] < 4: blogallpage = 0
-                            else: 
-                                if blogsc['total'] > 100: blogallpage = (100-1)//4
-                                else: blogallpage = (blogsc['total']-1)//4
-
-                            blogresult = await message.channel.send(embed=naverblogembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await blogresult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색]', fwhere_server=serverid_or_type)
-                            def naverblogcheck(reaction, user):
-                                return user == message.author and blogresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverblogcheck)
-                                except asyncio.TimeoutError:
-                                    await blogresult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await blogresult.clear_reactions()
+                                    if naverblogsc['total'] > 100: naverblogallpage = (100-1)//4
+                                    else: naverblogallpage = (naverblogsc['total']-1)//4
+                                naverblogembed = salmonext.naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                naverblogembed.set_author(name=botname, icon_url=boticon)
+                                naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                naverblogresult = await message.channel.send(embed=naverblogembed)
+                                for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                    await naverblogresult.add_reaction(emoji)
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색]', fwhere_server=serverid_or_type)
+                                while True:
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                    naverresult = naverblogresult
+                                    try:
+                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                    except asyncio.TimeoutError:
+                                        await naverblogresult.clear_reactions()
                                         break
-                                    if reaction.emoji == '▶':
-                                        await blogresult.remove_reaction('▶', user)
-                                        if page < blogallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await blogresult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await blogresult.remove_reaction('⏩', user)
-                                        if page < blogallpage-4:
-                                            page += 4
-                                        elif page == blogallpage:
-                                            continue
-                                        else:
-                                            page = blogallpage
-                                    if reaction.emoji == '⏪':
-                                        await blogresult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await blogresult.edit(embed=naverblogembed(page, 4))
+                                    else:
+                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
+                                        await pagect[1]
+                                        if type(pagect[0]) == int:
+                                            if page != pagect[0]:
+                                                page = pagect[0]
+                                                naverblogembed = salmonext.naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                naverblogembed.set_author(name=botname, icon_url=boticon)
+                                                naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                await naverblogresult.edit(embed=naverblogembed)
+                                        elif pagect[0] == None: break
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색 정지]', fwhere_server=serverid_or_type)
 
-                elif searchstr.startswith(prefix + '네이버검색 뉴스'):
+                if searchstr.startswith(prefix + '네이버검색 뉴스'):
                     cmdlen = 8
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        newssc = naverSearch(word, 'news', naversortcode)
-                        if newssc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(newssc) == int:
-                            await message.channel.send(f'오류! 코드: {newssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif newssc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
+                        query = searchstr[len(prefix)+1+cmdlen:]
+                        try:
+                            navernewssc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
+                        except Exception as ex:
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
-                            for linenum in range(len(newssc['items'])):
-                                for newsreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    newssc['items'][linenum]['title'] = newssc['items'][linenum]['title'].replace(newsreplaces[0], newsreplaces[1])
-                                    newssc['items'][linenum]['description'] = newssc['items'][linenum]['description'].replace(newsreplaces[0], newsreplaces[1])
-                            def navernewsembed(pg, one=4):
-                                embed=discord.Embed(title=f'🔍📰 네이버 뉴스 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= newssc['total']:
-                                        title = newssc['items'][page*one+af]['title']
-                                        originallink = newssc['items'][page*one+af]['link']
-                                        description = newssc['items'][page*one+af]['description']
-                                        if description == '':
-                                            description = '(설명 없음)'
-                                        pubdateraw = newssc['items'][page*one+af]['pubDate']
-                                        pubdate = datetime.datetime.strptime(pubdateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                        if pubdate.strftime('%p') == 'AM':
-                                            dayweek = '오전'
-                                        elif pubdate.strftime('%p') == 'PM':
-                                            dayweek = '오후'
-                                        hour12 = pubdate.strftime('%I')
-                                        pubdatetext = f'{pubdate.year}년 {pubdate.month}월 {pubdate.day}일 {dayweek} {hour12}시 {pubdate.minute}분'
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({originallink})**\n{description}\n- **{pubdatetext}**", inline=False)
-                                    else:
-                                        break
-                                if newssc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if newssc['total'] < one: allpage = 0
+                            if navernewssc == 429:
+                                await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                            elif type(navernewssc) == int:
+                                await message.channel.send(f'오류! 코드: {navernewssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                            elif navernewssc['total'] == 0:
+                                await message.channel.send('검색 결과가 없습니다!')
+                            else:
+                                
+                                if navernewssc['total'] < 4: navernewsallpage = 0
                                 else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (newssc['total']-1)//one
-                                builddateraw = newssc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {newssc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if newssc['total'] < 4: newsallpage = 0
-                            else: 
-                                if newssc['total'] > 100: newsallpage = (100-1)//4
-                                else: newsallpage = (newssc['total']-1)//4
-                            
-                            newsresult = await message.channel.send(embed=navernewsembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await newsresult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색]', fwhere_server=serverid_or_type)
-                            def navernewscheck(reaction, user):
-                                return user == message.author and newsresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navernewscheck)
-                                except asyncio.TimeoutError:
-                                    await newsresult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await newsresult.clear_reactions()
+                                    if navernewssc['total'] > 100: navernewsallpage = (100-1)//4
+                                    else: navernewsallpage = (navernewssc['total']-1)//4
+                                navernewsembed = salmonext.naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                navernewsembed.set_author(name=botname, icon_url=boticon)
+                                navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                navernewsresult = await message.channel.send(embed=navernewsembed)
+                                for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                    await navernewsresult.add_reaction(emoji)
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색]', fwhere_server=serverid_or_type)
+                                while True:
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                    naverresult = naverblogresult
+                                    try:
+                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                    except asyncio.TimeoutError:
+                                        await navernewsresult.clear_reactions()
                                         break
-                                    if reaction.emoji == '▶':
-                                        await newsresult.remove_reaction('▶', user)
-                                        if page < newsallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await newsresult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await newsresult.remove_reaction('⏩', user)
-                                        if page < newsallpage-4:
-                                            page += 4
-                                        elif page == newsallpage:
-                                            continue
-                                        else:
-                                            page = newsallpage
-                                    if reaction.emoji == '⏪':
-                                        await newsresult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await newsresult.edit(embed=navernewsembed(page, 4))
+                                    else:
+                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
+                                        await pagect[1]
+                                        if type(pagect[0]) == int:
+                                            if page != pagect[0]:
+                                                page = pagect[0]
+                                                navernewsembed = salmonext.naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                navernewsembed.set_author(name=botname, icon_url=boticon)
+                                                navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                await navernewsresult.edit(embed=navernewsembed)
+                                        elif pagect[0] == None: break
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색 정지]', fwhere_server=serverid_or_type)
 
-                elif searchstr.startswith(prefix + '네이버검색 책'):
+                if searchstr.startswith(prefix + '네이버검색 책'):
                     cmdlen = 7
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        booksc = naverSearch(word, 'book', naversortcode)
-                        if booksc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(booksc) == int:
-                            await message.channel.send(f'오류! 코드: {booksc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif booksc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
+                        query = searchstr[len(prefix)+1+cmdlen:]
+                        try:
+                            naverbooksc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
+                        except Exception as ex:
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
-                            for linenum in range(len(booksc['items'])):
-                                for bookreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    booksc['items'][linenum]['title'] = booksc['items'][linenum]['title'].replace(bookreplaces[0], bookreplaces[1])
-                                    booksc['items'][linenum]['description'] = booksc['items'][linenum]['description'].replace(bookreplaces[0], bookreplaces[1])
-                                booksc['items'][linenum]['author'] = booksc['items'][linenum]['author'].replace('|', ', ')
-                            def naverbookembed(pg, one=4):
-                                embed=discord.Embed(title=f'🔍📗 네이버 책 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= booksc['total']:
-                                        title = booksc['items'][page*one+af]['title']
-                                        link = booksc['items'][page*one+af]['link']
-                                        author = booksc['items'][page*one+af]['author']
-                                        price = booksc['items'][page*one+af]['price']
-                                        discount = booksc['items'][page*one+af]['discount']
-                                        publisher = booksc['items'][page*one+af]['publisher']
-                                        description = booksc['items'][page*one+af]['description']
-                                        if description == '':
-                                            description = '(설명 없음)'
-                                        pubdate_year = int(booksc['items'][page*one+af]['pubdate'][0:4])
-                                        pubdate_month = int(booksc['items'][page*one+af]['pubdate'][4:6])
-                                        pubdate_day = int(booksc['items'][page*one+af]['pubdate'][6:8])
-                                        pubdate = f'{pubdate_year}년 {pubdate_month}월 {pubdate_day}일'
-                                        isbn = booksc['items'][page*one+af]['isbn'].split(' ')[1]
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{author} 저 | {publisher} | {pubdate} | ISBN: {isbn}\n**{discount}원**~~`{price}원`~~\n\n{description}", inline=False)
-                                    else:
-                                        break
-                                if booksc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if booksc['total'] < one: allpage = 0
+                            if naverbooksc == 429:
+                                await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                            elif type(naverbooksc) == int:
+                                await message.channel.send(f'오류! 코드: {naverbooksc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                            elif naverbooksc['total'] == 0:
+                                await message.channel.send('검색 결과가 없습니다!')
+                            else:
+                                
+                                if naverbooksc['total'] < 4: naverbookallpage = 0
                                 else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (booksc['total']-1)//one
-                                builddateraw = booksc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {booksc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if booksc['total'] < 4: bookallpage = 0
-                            else: 
-                                if booksc['total'] > 100: bookallpage = (100-1)//4
-                                else: bookallpage = (booksc['total']-1)//4
-                            
-                            bookresult = await message.channel.send(embed=naverbookembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await bookresult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색]', fwhere_server=serverid_or_type)
-                            def naverbookcheck(reaction, user):
-                                return user == message.author and bookresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverbookcheck)
-                                except asyncio.TimeoutError:
-                                    await bookresult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await bookresult.clear_reactions()
+                                    if naverbooksc['total'] > 100: naverbookallpage = (100-1)//4
+                                    else: naverbookallpage = (naverbooksc['total']-1)//4
+                                naverbookembed = salmonext.naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                naverbookembed.set_author(name=botname, icon_url=boticon)
+                                naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                naverbookresult = await message.channel.send(embed=naverbookembed)
+                                for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                    await naverbookresult.add_reaction(emoji)
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색]', fwhere_server=serverid_or_type)
+                                while True:
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                    naverresult = naverblogresult
+                                    try:
+                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                    except asyncio.TimeoutError:
+                                        await naverbookresult.clear_reactions()
                                         break
-                                    if reaction.emoji == '▶':
-                                        await bookresult.remove_reaction('▶', user)
-                                        if page < bookallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await bookresult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await bookresult.remove_reaction('⏩', user)
-                                        if page < bookallpage-4:
-                                            page += 4
-                                        elif page == bookallpage:
-                                            continue
-                                        else:
-                                            page = bookallpage
-                                    if reaction.emoji == '⏪':
-                                        await bookresult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await bookresult.edit(embed=naverbookembed(page, 4))
+                                    else:
+                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=4, nowpage=page)
+                                        await pagect[1]
+                                        if type(pagect[0]) == int:
+                                            if page != pagect[0]:
+                                                page = pagect[0]
+                                                naverbookembed = salmonext.naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                naverbookembed.set_author(name=botname, icon_url=boticon)
+                                                naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                await naverbookresult.edit(embed=naverbookembed)
+                                        elif pagect[0] == None: break
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색 정지]', fwhere_server=serverid_or_type)
-
-                elif searchstr.startswith(prefix + '네이버검색 백과사전'):
-                    cmdlen = 10
-                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                        page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        encysc = naverSearch(word, 'encyc', naversortcode)
-                        if encysc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(encysc) == int:
-                            await message.channel.send(f'오류! 코드: {encysc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif encysc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
-                        else:
-                            for linenum in range(len(encysc['items'])):
-                                for encyreplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    encysc['items'][linenum]['title'] = encysc['items'][linenum]['title'].replace(encyreplaces[0], encyreplaces[1])
-                                    encysc['items'][linenum]['description'] = encysc['items'][linenum]['description'].replace(encyreplaces[0], encyreplaces[1])
-                            def naverencyembed(pg, one=4):
-                                embed=discord.Embed(title=f'🔍📚 네이버 백과사전 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= encysc['total']:
-                                        title = encysc['items'][page*one+af]['title']
-                                        link = encysc['items'][page*one+af]['link']
-                                        description = encysc['items'][page*one+af]['description']
-                                        if description == '':
-                                            description = '(설명 없음)'
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
-                                    else:
-                                        break
-                                if encysc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if encysc['total'] < one: allpage = 0
-                                else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (encysc['total']-1)//one
-                                builddateraw = encysc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {encysc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if encysc['total'] < 4: encyallpage = 0
-                            else: 
-                                if encysc['total'] > 100: encyallpage = (100-1)//4
-                                else: encyallpage = (encysc['total']-1)//4
-                            
-                            encyresult = await message.channel.send(embed=naverencyembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await encyresult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색]', fwhere_server=serverid_or_type)
-                            def naverencycheck(reaction, user):
-                                return user == message.author and encyresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=naverencycheck)
-                                except asyncio.TimeoutError:
-                                    await encyresult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await encyresult.clear_reactions()
-                                        break
-                                    if reaction.emoji == '▶':
-                                        await encyresult.remove_reaction('▶', user)
-                                        if page < encyallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await encyresult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await encyresult.remove_reaction('⏩', user)
-                                        if page < encyallpage-4:
-                                            page += 4
-                                        elif page == encyallpage:
-                                            continue
-                                        else:
-                                            page = encyallpage
-                                    if reaction.emoji == '⏪':
-                                        await encyresult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await encyresult.edit(embed=naverencyembed(page, 4))
-                                        
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
-
-                elif searchstr.startswith(prefix + '네이버검색 영화'):
-                    cmdlen = 8
-                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                        page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        moviesc = naverSearch(word, 'movie', naversortcode)
-                        if moviesc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(moviesc) == int:
-                            await message.channel.send(f'오류! 코드: {moviesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif moviesc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
-                        else:
-                            for linenum in range(len(moviesc['items'])):
-                                for moviereplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    moviesc['items'][linenum]['title'] = moviesc['items'][linenum]['title'].replace(moviereplaces[0], moviereplaces[1])
-                            def navermovieembed(pg, one=4):
-                                embed=discord.Embed(title=f'🔍📰 네이버 영화 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= moviesc['total']:
-                                        title = moviesc['items'][page*one+af]['title']
-                                        link = moviesc['items'][page*one+af]['link']
-                                        subtitle = moviesc['items'][page*one+af]['subtitle']
-                                        pubdate = moviesc['items'][page*one+af]['pubDate']
-                                        director = moviesc['items'][page*one+af]['director'].replace('|', ', ')[:-2]
-                                        actor = moviesc['items'][page*one+af]['actor'].replace('|', ', ')[:-2]
-                                        userrating = moviesc['items'][page*one+af]['userRating']
-                                        userratingbar = ('★' * round(float(userrating)/2)) + ('☆' * (5-round(float(userrating)/2)))
-
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})** ({subtitle})\n`{userratingbar} {userrating}`\n감독: {director} | 출연: {actor} | {pubdate}", inline=False)
-                                    else:
-                                        break
-                                if moviesc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if moviesc['total'] < one: allpage = 0
-                                else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (moviesc['total']-1)//one
-                                builddateraw = moviesc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {moviesc['total']}건{max100}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if moviesc['total'] < 4: movieallpage = 0
-                            else: 
-                                if moviesc['total'] > 100: movieallpage = (100-1)//4
-                                else: movieallpage = (moviesc['total']-1)//4
-                            
-                            movieresult = await message.channel.send(embed=navermovieembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await movieresult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색]', fwhere_server=serverid_or_type)
-                            def navermoviecheck(reaction, user):
-                                return user == message.author and movieresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navermoviecheck)
-                                except asyncio.TimeoutError:
-                                    await movieresult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await movieresult.clear_reactions()
-                                        break
-                                    if reaction.emoji == '▶':
-                                        await movieresult.remove_reaction('▶', user)
-                                        if page < movieallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await movieresult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await movieresult.remove_reaction('⏩', user)
-                                        if page < movieallpage-4:
-                                            page += 4
-                                        elif page == movieallpage:
-                                            continue
-                                        else:
-                                            page = movieallpage
-                                    if reaction.emoji == '⏪':
-                                        await movieresult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await movieresult.edit(embed=navermovieembed(page, 4))
-                                        
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]', fwhere_server=serverid_or_type)
-
-                if searchstr.startswith(prefix + '네이버검색 카페글'):
-                    cmdlen = 9
-                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                        page = 0
-                        word = searchstr[len(prefix)+1+cmdlen:]
-                        cafesc = naverSearch(word, 'cafearticle', naversortcode)
-                        if cafesc == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
-                        elif type(cafesc) == int:
-                            await message.channel.send(f'오류! 코드: {cafesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
-                        elif cafesc['total'] == 0:
-                            await message.channel.send('검색 결과가 없습니다!')
-                        else:
-                            for linenum in range(len(cafesc['items'])):
-                                for cafereplaces in [['`', '\`'], ['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`']]:
-                                    cafesc['items'][linenum]['title'] = cafesc['items'][linenum]['title'].replace(cafereplaces[0], cafereplaces[1])
-                                    cafesc['items'][linenum]['description'] = cafesc['items'][linenum]['description'].replace(cafereplaces[0], cafereplaces[1])
-                            def navercafeembed(pg, one):
-                                embed=discord.Embed(title=f'🔍☕ 네이버 카페글 검색 결과 - `{word}`', color=color['websearch'], timestamp=datetime.datetime.utcnow())
-                                for af in range(one):
-                                    if page*one+af+1 <= cafesc['total']:
-                                        title = cafesc['items'][page*one+af]['title']
-                                        link = cafesc['items'][page*one+af]['link']
-                                        description = cafesc['items'][page*one+af]['description']
-                                        if description == '':
-                                            description = '(설명 없음)'
-                                        cafename = cafesc['items'][page*one+af]['cafename']
-                                        cafeurl = cafesc['items'][page*one+af]['cafeurl']
-                                        embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{cafename}]({cafeurl})*", inline=False)
-                                    else:
-                                        break
-                                if cafesc['total'] > 100: max100 = ' 중 상위 100건'
-                                else: max100 = ''
-                                if cafesc['total'] < one: allpage = 0
-                                else: 
-                                    if max100: allpage = (100-1)//one
-                                    else: allpage = (cafesc['total']-1)//one
-                                builddateraw = cafesc['lastBuildDate']
-                                builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-                                if builddate.strftime('%p') == 'AM':
-                                    builddayweek = '오전'
-                                elif builddate.strftime('%p') == 'PM':
-                                    builddayweek = '오후'
-                                buildhour12 = builddate.strftime('%I')
-                                embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {cafesc['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                return embed
-                            
-                            if cafesc['total'] < 4: cafeallpage = 0
-                            else: 
-                                if cafesc['total'] > 100: cafeallpage = (100-1)//4
-                                else: cafeallpage = (cafesc['total']-1)//4
-
-                            caferesult = await message.channel.send(embed=navercafeembed(page, 4))
-                            for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await caferesult.add_reaction(emoji)
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 카페글검색]', fwhere_server=serverid_or_type)
-                            def navercafecheck(reaction, user):
-                                return user == message.author and caferesult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            while True:
-                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercafecheck)
-                                except asyncio.TimeoutError:
-                                    await caferesult.clear_reactions()
-                                    break
-                                else:
-                                    if reaction.emoji == '⏹':
-                                        await caferesult.clear_reactions()
-                                        break
-                                    if reaction.emoji == '▶':
-                                        await caferesult.remove_reaction('▶', user)
-                                        if page < cafeallpage:
-                                            page += 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '◀':
-                                        await caferesult.remove_reaction('◀', user)
-                                        if page > 0: 
-                                            page -= 1
-                                        else:
-                                            continue
-                                    if reaction.emoji == '⏩':
-                                        await caferesult.remove_reaction('⏩', user)
-                                        if page < cafeallpage-4:
-                                            page += 4
-                                        elif page == cafeallpage:
-                                            continue
-                                        else:
-                                            page = cafeallpage
-                                    if reaction.emoji == '⏪':
-                                        await caferesult.remove_reaction('⏪', user)
-                                        if page > 4:
-                                            page -= 4
-                                        elif page == 0:
-                                            continue
-                                        else:
-                                            page = 0
-                                    await caferesult.edit(embed=navercafeembed(page, 4))
-                                        
-                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 카페글검색 정지]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
@@ -1072,10 +580,12 @@ async def on_message(message):
                         cmdlen = 8
                         print(cur.execute('select * from serverdata where noticechannel is not NULL'))
                         servers = cur.fetchall()
-                        notisend = await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
+                        await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
                         for notichannel in servers:
                             await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
+                    elif message.content == prefix + '//error':
+                        await globalmsg.channel.send(embed=errormsg('TEST', serverid_or_type))
 
             elif message.content[len(prefix)] == '%': pass
 
@@ -1102,11 +612,11 @@ def msglog(fwho, fwhere_channel, freceived, fsent, fetc=None, fwhere_server=None
         logline = f'[ServerID:] {fwhere_server}, [ChannelID:] {fwhere_channel}, [Author:] {fwho}, [RCV:] {freceived}, [Sent:] {fsent}, [etc:] {fetc}'
     logger.info(logline)
 
-def errormsg(error, where='idk'):
-    embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description='오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
+def errormsg(error, where='idk', why=''):
+    embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
-    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[존재하지 않는 명령어입니다!]', fwhere_server=where)
+    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, f'[오류: {error}]', fwhere_server=where)
     return embed
 
 def onlyguild(where='idk'):
