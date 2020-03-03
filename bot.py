@@ -14,8 +14,7 @@ import paramiko
 import re
 import os
 import urllib.request
-import salmonext.naver_search
-import salmonext.pagecontrol
+from salmonext import naver_search, pagecontrol, mastercommand
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -117,7 +116,7 @@ async def on_ready():
 async def tensecloop():
     global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem, acnum
     try:
-        aclist = [f'연어봇 - {prefix}도움 입력!', '테스트2']
+        aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께']
         await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
         if acnum >= len(aclist)-1: acnum = 0
         else: acnum += 1
@@ -391,12 +390,12 @@ async def on_message(message):
                     cur.execute('select * from serverdata where id=%s', message.guild.id)
                     servernoticeid = cur.fetchall()[0]['noticechannel']
                     if servernoticeid == None:
-                        embed=discord.Embed(title='📢 공지채널 설정', color=color['salmon'], timestamp=datetime.datetime.utcnow(),
+                        embed=discord.Embed(title='📢 공지채널 설정', color=color['ask'], timestamp=datetime.datetime.utcnow(),
                         description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널이 설정되어 있지 않습니다. 이 채널을 공지 채널로 설정할까요?')
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                     else:
-                        embed=discord.Embed(title='📢 공지채널 설정', color=color['salmon'], timestamp=datetime.datetime.utcnow(),
+                        embed=discord.Embed(title='📢 공지채널 설정', color=color['ask'], timestamp=datetime.datetime.utcnow(),
                         description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널은 {client.get_channel(servernoticeid).mention} 으로 설정되어 있습니다.\n현재 채널을 공지 채널로 설정할까요?')
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -444,7 +443,7 @@ async def on_message(message):
                         page = 0
                         query = searchstr[len(prefix)+1+cmdlen:]
                         try:
-                            naverblogsc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
+                            naverblogsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
                         except Exception as ex:
                             await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
@@ -463,7 +462,7 @@ async def on_message(message):
                                 else: 
                                     if naverblogsc['total'] > 100: naverblogallpage = (100-1)//4
                                     else: naverblogallpage = (naverblogsc['total']-1)//4
-                                naverblogembed = salmonext.naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                naverblogembed = naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                 naverblogembed.set_author(name=botname, icon_url=boticon)
                                 naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 naverblogresult = await message.channel.send(embed=naverblogembed)
@@ -479,12 +478,12 @@ async def on_message(message):
                                         await naverblogresult.clear_reactions()
                                         break
                                     else:
-                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
+                                        pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
                                         await pagect[1]
                                         if type(pagect[0]) == int:
                                             if page != pagect[0]:
                                                 page = pagect[0]
-                                                naverblogembed = salmonext.naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                naverblogembed = naver_search.blogEmbed(jsonresults=naverblogsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                                 naverblogembed.set_author(name=botname, icon_url=boticon)
                                                 naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                 await naverblogresult.edit(embed=naverblogembed)
@@ -498,7 +497,7 @@ async def on_message(message):
                         page = 0
                         query = searchstr[len(prefix)+1+cmdlen:]
                         try:
-                            navernewssc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
+                            navernewssc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
                         except Exception as ex:
                             await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
@@ -517,7 +516,7 @@ async def on_message(message):
                                 else: 
                                     if navernewssc['total'] > 100: navernewsallpage = (100-1)//4
                                     else: navernewsallpage = (navernewssc['total']-1)//4
-                                navernewsembed = salmonext.naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                navernewsembed = naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                 navernewsembed.set_author(name=botname, icon_url=boticon)
                                 navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 navernewsresult = await message.channel.send(embed=navernewsembed)
@@ -533,12 +532,12 @@ async def on_message(message):
                                         await navernewsresult.clear_reactions()
                                         break
                                     else:
-                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
+                                        pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
                                         await pagect[1]
                                         if type(pagect[0]) == int:
                                             if page != pagect[0]:
                                                 page = pagect[0]
-                                                navernewsembed = salmonext.naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                navernewsembed = naver_search.newsEmbed(jsonresults=navernewssc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                                 navernewsembed.set_author(name=botname, icon_url=boticon)
                                                 navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                 await navernewsresult.edit(embed=navernewsembed)
@@ -552,7 +551,7 @@ async def on_message(message):
                         page = 0
                         query = searchstr[len(prefix)+1+cmdlen:]
                         try:
-                            naverbooksc = salmonext.naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
+                            naverbooksc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
                         except Exception as ex:
                             await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
@@ -571,7 +570,7 @@ async def on_message(message):
                                 else: 
                                     if naverbooksc['total'] > 100: naverbookallpage = (100-1)//4
                                     else: naverbookallpage = (naverbooksc['total']-1)//4
-                                naverbookembed = salmonext.naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                naverbookembed = naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                 naverbookembed.set_author(name=botname, icon_url=boticon)
                                 naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                 naverbookresult = await message.channel.send(embed=naverbookembed)
@@ -587,12 +586,12 @@ async def on_message(message):
                                         await naverbookresult.clear_reactions()
                                         break
                                     else:
-                                        pagect = salmonext.pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=4, nowpage=page)
+                                        pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=4, nowpage=page)
                                         await pagect[1]
                                         if type(pagect[0]) == int:
                                             if page != pagect[0]:
                                                 page = pagect[0]
-                                                naverbookembed = salmonext.naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                naverbookembed = naver_search.bookEmbed(jsonresults=naverbooksc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
                                                 naverbookembed.set_author(name=botname, icon_url=boticon)
                                                 naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                 await naverbookresult.edit(embed=naverbookembed)
@@ -609,9 +608,29 @@ async def on_message(message):
                         config['inspection'] = False
                         await message.channel.send('관리자 외 사용제한 꺼짐.')
                     elif message.content.startswith(prefix + '//exec'):
-                        exec(message.content[len(prefix)+7:])
+                        try:
+                            exout = eval(message.content[len(prefix)+7:])
+                        except Exception as ex:
+                            execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
+                        else:
+                            execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{exout}```\n✅ SUCCESS'
+                        embed=discord.Embed(title='**💬 EXEC**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=execout)
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        await message.channel.send(embed=embed)
+                        msglog(message.author.id, message.channel.id, message.content, '[EXEC]', fwhere_server=serverid_or_type)
                     elif message.content.startswith(prefix + '//eval'):
-                        eval(message.content[len(prefix)+7:])
+                        try:
+                            evout = eval(message.content[len(prefix)+7:])
+                        except Exception as ex:
+                            evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
+                        else:
+                            evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{evout}```\n✅ SUCCESS'
+                        embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        await message.channel.send(embed=embed)
+                        msglog(message.author.id, message.channel.id, message.content, '[EVAL]', fwhere_server=serverid_or_type)
                     elif message.content.startswith(prefix + '//await'):
                         await eval(message.content[len(prefix)+8:])
                     elif message.content == prefix + '//p':
