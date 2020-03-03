@@ -142,7 +142,7 @@ async def tensecloop():
                 if seclist.count(spamuser) >= 5:
                     black.append(spamuser)
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]', fwhere_server=serverid_or_type)
+                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
     except Exception as ex:
         if str(ex) != "name 'globalmsg' is not defined":
@@ -183,7 +183,7 @@ async def on_message(message):
                 embed = discord.Embed(title=f'{botname} 등록', description='**연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 동의하시면 20초 안에 `동의`를 입력해주세요.**', color=color['ask'], timestamp=datetime.datetime.utcnow())
                 embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
                 embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-                await message.channel.send(content=f'<@{message.author.id}>', embed=embed)
+                await message.channel.send(content=message.author.mention, embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[등록: 이용약관 및 개인정보 취급방침의 동의]', fwhere_server=serverid_or_type) 
                 try:
                     msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
@@ -257,7 +257,7 @@ async def on_message(message):
                 계속하시려면 `탈퇴`를 입력하십시오.''', color=color['warn'], timestamp=datetime.datetime.utcnow())
                 embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
                 embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-                await message.channel.send(content=f'<@{message.author.id}>', embed=embed)
+                await message.channel.send(content=message.author.mention, embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[탈퇴: 사용자 탈퇴]', fwhere_server=serverid_or_type)
                 try:
                     msg = await client.wait_for('message', timeout=20.0, check=checkmsg)
@@ -387,7 +387,41 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[서버상태 데이터서버]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '공지채널':
-                embed=discord.Embed(title='🖥 데이터서버 상태', description=f'데이터베이스 연결 열림: **{db.open}**\n데이터베이스 서버 상태: **{dbalive}**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                if message.channel.permissions_for(message.author).administrator:
+                    cur.execute('select * from serverdata where id=%s', message.guild.id)
+                    servernoticeid = cur.fetchall()[0]['noticechannel']
+                    if servernoticeid == None:
+                        embed=discord.Embed(title='📢 공지채널 설정', color=color['salmon'], timestamp=datetime.datetime.utcnow(),
+                        description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널이 설정되어 있지 않습니다. 이 채널을 공지 채널로 설정할까요?')
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                    else:
+                        embed=discord.Embed(title='📢 공지채널 설정', color=color['salmon'], timestamp=datetime.datetime.utcnow(),
+                        description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널은 {client.get_channel(servernoticeid).mention} 으로 설정되어 있습니다.\n현재 채널을 공지 채널로 설정할까요?')
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                    noticeselect = await message.channel.send(content=message.author.mention, embed=embed)
+                    for emoji in ['⭕', '❌']:
+                        await noticeselect.add_reaction(emoji)
+                    msglog(message.author.id, message.channel.id, message.content, '[공지채널]', fwhere_server=serverid_or_type)
+                    def noticecheck(reaction, user):
+                        return user == message.author and noticeselect.id == reaction.message.id and str(reaction.emoji) in ['⭕', '❌']
+                    try:
+                        reaction, user = await client.wait_for('reaction_add', timeout=20.0, check=noticecheck)
+                    except asyncio.TimeoutError:
+                        embed=discord.Embed(description=f'**⛔ 시간이 초과되었습니다.**', color=color['error'])
+                        await message.channel.send(embed=embed)
+                        msglog(message.author.id, message.channel.id, message.content, '[공지채널: 시간 초과]', fwhere_server=serverid_or_type)
+                    else:
+                        if reaction.emoji == '❌':
+                            embed=discord.Embed(description=f'**❌ 취소되었습니다.**', color=color['error'])
+                            await message.channel.send(embed=embed)
+                            msglog(message.author.id, message.channel.id, message.content, '[공지채널: 취소됨]', fwhere_server=serverid_or_type)
+                        elif reaction.emoji == '⭕':
+                            cur.execute('update serverdata set noticechannel=%s where id=%s', (message.channel.id, message.guild.id))
+                            embed=discord.Embed(description=f'**✅ {botname}의 현재 서버 공지 채널이{message.channel.mention} 으로 설정되었습니다!**', color=color['salmon'])
+                            await message.channel.send(embed=embed)
+                            msglog(message.author.id, message.channel.id, message.content, '[공지채널: 설정됨]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '네이버검색'):
                 def navercheck(reaction, user):
