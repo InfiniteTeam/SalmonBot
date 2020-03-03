@@ -18,6 +18,6 @@
         "warn": "0xffe400",
         "error": "0xff0000",
         "ask": "0xa566ff",
-        "websearch": "0x1ddb16"
+        "naversearch": "0x1ddb16"
     }  
 }

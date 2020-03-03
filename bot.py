@@ -58,6 +58,7 @@ versionPrefix = version['versionPrefix']
 
 seclist =[]
 black = []
+acnum = 0
 
 # =============== SSH connect ===============
 sshclient = paramiko.SSHClient()
@@ -110,12 +111,16 @@ client = discord.Client()
 async def on_ready():
     logger.info(f'Logged in as {client.user}')
     tensecloop.start()
-    await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
+    #await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
 
 @tasks.loop(seconds=5)
 async def tensecloop():
-    global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem
+    global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem, acnum
     try:
+        aclist = [f'연어봇 - {prefix}도움 입력!', '테스트2']
+        await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
+        if acnum >= len(aclist)-1: acnum = 0
+        else: acnum += 1
         ping = round(1000 * client.latency)
         if ping <= 100: pinglevel = '🔵 매우좋음'
         elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
@@ -132,13 +137,16 @@ async def tensecloop():
         cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
         cpulist = cpus.split('\n')[:-1]
         mem = sshcmd('free -m')
-        if not globalmsg.author.id in black:
-            if seclist.count(spamuser) >= 5:
-                black.append(spamuser)
-                await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-                msglog(message.author.id, message.channel.id, message.content, '[차단됨. 사유: 명령어 도배]', fwhere_server=serverid_or_type)
-            seclist = []
-    except: pass
+        if globalmsg != None:
+            if not globalmsg.author.id in black:
+                if seclist.count(spamuser) >= 5:
+                    black.append(spamuser)
+                    await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]', fwhere_server=serverid_or_type)
+                seclist = []
+    except Exception as ex:
+        if str(ex) != "name 'globalmsg' is not defined":
+            print(ex)
 
 @client.event
 async def on_message(message):
@@ -484,7 +492,7 @@ async def on_message(message):
                                 msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색]', fwhere_server=serverid_or_type)
                                 while True:
                                     msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                    naverresult = naverblogresult
+                                    naverresult = navernewsresult
                                     try:
                                         reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
                                     except asyncio.TimeoutError:
@@ -538,7 +546,7 @@ async def on_message(message):
                                 msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색]', fwhere_server=serverid_or_type)
                                 while True:
                                     msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
-                                    naverresult = naverblogresult
+                                    naverresult = naverbookresult
                                     try:
                                         reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
                                     except asyncio.TimeoutError:
@@ -563,11 +571,9 @@ async def on_message(message):
                     if message.content == prefix + '//i t':
                         config['inspection'] = True
                         await message.channel.send('관리자 외 사용제한 켜짐.')
-                        print(config['inspection'])
                     elif message.content == prefix + '//i f':
                         config['inspection'] = False
                         await message.channel.send('관리자 외 사용제한 꺼짐.')
-                        print(config['inspection'])
                     elif message.content.startswith(prefix + '//exec'):
                         exec(message.content[len(prefix)+7:])
                     elif message.content.startswith(prefix + '//eval'):
