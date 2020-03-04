@@ -13,6 +13,7 @@ import logging.handlers
 import paramiko
 import re
 import os
+import sys
 import urllib.request
 from salmonext import naver_search, pagecontrol, mastercommand
 
@@ -58,6 +59,8 @@ versionPrefix = version['versionPrefix']
 seclist =[]
 black = []
 acnum = 0
+
+starttime = datetime.datetime.now()
 
 # =============== SSH connect ===============
 sshclient = paramiko.SSHClient()
@@ -244,9 +247,7 @@ async def on_message(message):
             elif message.content == prefix + '블랙':
                 await message.channel.send(str(black))
             elif message.content == prefix + '샌즈':
-                for ch in message.guild.text_channels:
-                    print()
-                await message.channel.send('와!')
+                await message.guild.get_member(message.author.id).move_to(message.guild.get_channel(598454531600285706))
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '탈퇴':
@@ -307,6 +308,31 @@ async def on_message(message):
 
             elif message.content == prefix + '핑':
                 embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                embed.set_author(name=botname, icon_url=boticon)
+                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                await message.channel.send(embed=embed)
+                msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
+
+            elif message.content == prefix + '업타임':
+                uptimenow = re.findall('\d+', str(datetime.datetime.now() - starttime))
+                uptimestr = '봇 실행 시간: '
+                if len(uptimenow) == 4:
+                    if int(uptimenow[0]) > 0:
+                        uptimestr += f'{int(uptimenow[0])}시간 '
+                    if int(uptimenow[1]) > 0:
+                        uptimestr += f'{int(uptimenow[1])}분 '
+                    if int(uptimenow[2]) > 0:
+                        uptimestr += f'{int(uptimenow[2])}초 '
+                if len(uptimenow) == 5:
+                    if int(uptimenow[0]) > 0:
+                        uptimestr += f'{int(uptimenow[0])}일 '
+                    if int(uptimenow[1]) > 0:
+                        uptimestr += f'{int(uptimenow[1])}시간 '
+                    if int(uptimenow[2]) > 0:
+                        uptimestr += f'{int(uptimenow[2])}분 '
+                    if int(uptimenow[3]) > 0:
+                        uptimestr += f'{int(uptimenow[3])}초 '
+                embed=discord.Embed(title='⏱ 봇 실행 시간', description=uptimestr, color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
@@ -491,7 +517,7 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 블로그검색 정지]', fwhere_server=serverid_or_type)
 
-                if searchstr.startswith(prefix + '네이버검색 뉴스'):
+                elif searchstr.startswith(prefix + '네이버검색 뉴스'):
                     cmdlen = 8
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
@@ -545,7 +571,7 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 뉴스검색 정지]', fwhere_server=serverid_or_type)
 
-                if searchstr.startswith(prefix + '네이버검색 책'):
+                elif searchstr.startswith(prefix + '네이버검색 책'):
                     cmdlen = 7
                     if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                         page = 0
@@ -599,6 +625,114 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 책검색 정지]', fwhere_server=serverid_or_type)
 
+                elif searchstr.startswith(prefix + '네이버검색 백과사전'):
+                    cmdlen = 10
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                        page = 0
+                        query = searchstr[len(prefix)+1+cmdlen:]
+                        try:
+                            naverencycsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
+                        except Exception as ex:
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
+                        else:
+                            if naverencycsc == 429:
+                                await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                            elif type(naverencycsc) == int:
+                                await message.channel.send(f'오류! 코드: {naverencycsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                            elif naverencycsc['total'] == 0:
+                                await message.channel.send('검색 결과가 없습니다!')
+                            else:
+                                
+                                if naverencycsc['total'] < 4: naverencycallpage = 0
+                                else: 
+                                    if naverencycsc['total'] > 100: naverencycallpage = (100-1)//4
+                                    else: naverencycallpage = (naverencycsc['total']-1)//4
+                                naverencycembed = naver_search.encycEmbed(jsonresults=naverencycsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                naverencycembed.set_author(name=botname, icon_url=boticon)
+                                naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                naverencycresult = await message.channel.send(embed=naverencycembed)
+                                for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                    await naverencycresult.add_reaction(emoji)
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색]', fwhere_server=serverid_or_type)
+                                while True:
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                    naverresult = naverencycresult
+                                    try:
+                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                    except asyncio.TimeoutError:
+                                        await naverencycresult.clear_reactions()
+                                        break
+                                    else:
+                                        pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=4, nowpage=page)
+                                        await pagect[1]
+                                        if type(pagect[0]) == int:
+                                            if page != pagect[0]:
+                                                page = pagect[0]
+                                                naverencycembed = naver_search.encycEmbed(jsonresults=naverencycsc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                naverencycembed.set_author(name=botname, icon_url=boticon)
+                                                naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                await naverencycresult.edit(embed=naverencycembed)
+                                        elif pagect[0] == None: break
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 백과사전검색 정지]', fwhere_server=serverid_or_type)
+
+                elif searchstr.startswith(prefix + '네이버검색 영화'):
+                    cmdlen = 8
+                    if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                        page = 0
+                        query = searchstr[len(prefix)+1+cmdlen:]
+                        try:
+                            navermoviesc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='movie', query=query, sort=naversortcode)
+                        except Exception as ex:
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
+                        else:
+                            if navermoviesc == 429:
+                                await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]', fwhere_server=serverid_or_type)
+                            elif type(navermoviesc) == int:
+                                await message.channel.send(f'오류! 코드: {navermoviesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]', fwhere_server=serverid_or_type)
+                            elif navermoviesc['total'] == 0:
+                                await message.channel.send('검색 결과가 없습니다!')
+                            else:
+                                
+                                if navermoviesc['total'] < 4: navermovieallpage = 0
+                                else: 
+                                    if navermoviesc['total'] > 100: navermovieallpage = (100-1)//4
+                                    else: navermovieallpage = (navermoviesc['total']-1)//4
+                                navermovieembed = naver_search.movieEmbed(jsonresults=navermoviesc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                navermovieembed.set_author(name=botname, icon_url=boticon)
+                                navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                navermovieresult = await message.channel.send(embed=navermovieembed)
+                                for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                    await navermovieresult.add_reaction(emoji)
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색]', fwhere_server=serverid_or_type)
+                                while True:
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]', fwhere_server=serverid_or_type)
+                                    naverresult = navermovieresult
+                                    try:
+                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                    except asyncio.TimeoutError:
+                                        await navermovieresult.clear_reactions()
+                                        break
+                                    else:
+                                        pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=4, nowpage=page)
+                                        await pagect[1]
+                                        if type(pagect[0]) == int:
+                                            if page != pagect[0]:
+                                                page = pagect[0]
+                                                navermovieembed = naver_search.movieEmbed(jsonresults=navermoviesc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                navermovieembed.set_author(name=botname, icon_url=boticon)
+                                                navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                await navermovieresult.edit(embed=navermovieembed)
+                                        elif pagect[0] == None: break
+                                        
+                            msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]', fwhere_server=serverid_or_type)
+
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
                     if message.content == prefix + '//i t':
@@ -633,8 +767,12 @@ async def on_message(message):
                         msglog(message.author.id, message.channel.id, message.content, '[EVAL]', fwhere_server=serverid_or_type)
                     elif message.content.startswith(prefix + '//await'):
                         await eval(message.content[len(prefix)+8:])
-                    elif message.content == prefix + '//p':
-                        print(message.channel.permissions_for(message.author).manage_guild)
+                    elif message.content == prefix + '//restart --db':
+                        sshcmd('sudo systemctl restart mysql')
+                        await message.channel.send('DONE')
+                    elif message.content == prefix + '//restart --dbsv':
+                        sshcmd('sudo reboot')
+                        await message.channel.send('REBOOTING. Please restart the bot script')
                     elif message.content.startswith(prefix + '//noti '):
                         cmdlen = 8
                         print(cur.execute('select * from serverdata where noticechannel is not NULL'))

@@ -18,7 +18,8 @@ def naverSearch(id, secret, sctype, query, sort='sim'):
         for linenum in range(len(results['items'])):
             for replaces in replacepairs:
                 results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
-                results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
+                if sctype != 'movie':
+                    results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
         return results
     else:
         return rescode
@@ -97,7 +98,7 @@ def newsEmbed(jsonresults, page, perpage, color, query, naversort):
 
 def bookEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍📰 네이버 뉴스 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍📗 네이버 책 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -115,6 +116,67 @@ def bookEmbed(jsonresults, page, perpage, color, query, naversort):
             pubdate = f'{pubdate_year}년 {pubdate_month}월 {pubdate_day}일'
             isbn = results['items'][page*perpage+pgindex]['isbn'].split(' ')[1]
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{author} 저 | {publisher} | {pubdate} | ISBN: {isbn}\n**{discount}원**~~`{price}원`~~\n\n{description}", inline=False)
+        else:
+            break
+    if results['total'] > 100: max100 = ' 중 상위 100건'
+    else: max100 = ''
+    if results['total'] < perpage: allpage = 0
+    else: 
+        if max100: allpage = (100-1)//perpage
+        else: allpage = (results['total']-1)//perpage
+    builddateraw = results['lastBuildDate']
+    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+    if builddate.strftime('%p') == 'AM':
+        builddayweek = '오전'
+    elif builddate.strftime('%p') == 'PM':
+        builddayweek = '오후'
+    buildhour12 = builddate.strftime('%I')
+    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    return embed
+
+def encycEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍📚 네이버 백과사전 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= results['total']:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            description = results['items'][page*perpage+pgindex]['description']
+            if description == '':
+                description = '(설명 없음)'
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
+        else:
+            break
+    if results['total'] > 100: max100 = ' 중 상위 100건'
+    else: max100 = ''
+    if results['total'] < perpage: allpage = 0
+    else: 
+        if max100: allpage = (100-1)//perpage
+        else: allpage = (results['total']-1)//perpage
+    builddateraw = results['lastBuildDate']
+    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+    if builddate.strftime('%p') == 'AM':
+        builddayweek = '오전'
+    elif builddate.strftime('%p') == 'PM':
+        builddayweek = '오후'
+    buildhour12 = builddate.strftime('%I')
+    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    return embed
+
+def movieEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍🎬 네이버 영화 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= results['total']:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            subtitle = results['items'][page*perpage+pgindex]['subtitle']
+            pubdate = results['items'][page*perpage+pgindex]['pubDate']
+            director = results['items'][page*perpage+pgindex]['director'].replace('|', ', ')[:-2]
+            actor = results['items'][page*perpage+pgindex]['actor'].replace('|', ', ')[:-2]
+            userrating = results['items'][page*perpage+pgindex]['userRating']
+            userratingbar = ('★' * round(float(userrating)/2)) + ('☆' * (5-round(float(userrating)/2)))
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})** ({subtitle})\n`{userratingbar} {userrating}`\n감독: {director} | 출연: {actor} | {pubdate}", inline=False)
         else:
             break
     if results['total'] > 100: max100 = ' 중 상위 100건'
