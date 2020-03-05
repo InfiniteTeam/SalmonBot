@@ -135,7 +135,7 @@ async def secloop():
         pinglogger.info(f'{db.open}')
         dbip = config['dbIP']
         if config['localRun'] == True:
-            dbping = '0 (로컬 실행, 봇서버=데이터서버)'
+            dbping = '0'
         else:
             pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
             dbping = re.findall('\d+', pingcmd)[1]
@@ -151,7 +151,7 @@ async def secloop():
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
-    except Exception as ex:
+    except Exception:
         traceback.print_exc()
 
 @client.event
@@ -311,7 +311,11 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '핑':
-                embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                if config['localRun'] == True:
+                    localrunstr = '(로컬 실행, 봇서버 = 데이터서버)
+                else:
+                    localrunstr = ''
+                embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.\n{localrunstr}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
