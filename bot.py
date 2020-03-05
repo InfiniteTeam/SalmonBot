@@ -134,7 +134,7 @@ async def secloop():
         pinglogger.info(f'{db.open}')
         dbip = config['dbIP']
         if config['localRun'] == True:
-            dbping = '0ms (로컬 실행, 봇서버=데이터서버)'
+            dbping = '0 (로컬 실행, 봇서버=데이터서버)'
         else:
             pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
             dbping = re.findall('\d+', pingcmd)[1]
