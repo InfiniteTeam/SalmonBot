@@ -312,7 +312,7 @@ async def on_message(message):
 
             elif message.content == prefix + '핑':
                 if config['localRun'] == True:
-                    localrunstr = '(로컬 실행, 봇서버 = 데이터서버)
+                    localrunstr = '(로컬 실행, 봇서버 = 데이터서버)'
                 else:
                     localrunstr = ''
                 embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{ping}ms - {pinglevel}\n**데이터서버 지연시간: **{dbping}ms\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.\n{localrunstr}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
