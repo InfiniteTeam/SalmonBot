@@ -120,7 +120,6 @@ async def on_ready():
 async def secloop():
     global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem, acnum
     try:
-        a = 1 / 0
         aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께']
         await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
         if acnum >= len(aclist)-1: acnum = 0
