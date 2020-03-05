@@ -34,13 +34,13 @@ if platform.system() == 'Windows':
     with open('C:/salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
         openapi = json.load(openapi_file)
 elif platform.system() == 'Linux':
-    with open('/.salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
+    with open('/home/pi/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
         token = token_file.readline()
-    with open('/.salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
+    with open('/home/pi/salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
-    with open('/.salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
+    with open('/home/pi/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
         ssh = json.load(ssh_file)
-    with open('/.salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
+    with open('/home/pi/salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
         openapi = json.load(openapi_file)
 
 botname = config['botName']
