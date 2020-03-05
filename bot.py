@@ -15,6 +15,7 @@ import re
 import os
 import sys
 import urllib.request
+import traceback
 from salmonext import naver_search, pagecontrol, mastercommand
 
 # =============== Local Data Load ===============
@@ -118,39 +119,37 @@ async def on_ready():
 @tasks.loop(seconds=5)
 async def secloop():
     global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem, acnum
-    #try:
-    aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께']
-    await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
-    if acnum >= len(aclist)-1: acnum = 0
-    else: acnum += 1
-    ping = round(1000 * client.latency)
-    if ping <= 100: pinglevel = '🔵 매우좋음'
-    elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
-    elif ping > 250 and ping <= 400: pinglevel = '🟡 보통'
-    elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
-    elif ping > 550: pinglevel = '⚫ 매우나쁨'
-    pinglogger.info(f'{ping}ms')
-    pinglogger.info(f'{db.open}')
-    dbip = config['dbIP']
-    pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
-    dbping = re.findall('\d+', pingcmd)[1]
-    temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
-    temp = temp[5:]
-    cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
-    cpulist = cpus.split('\n')[:-1]
-    mem = sshcmd('free -m')
-    if globalmsg != None:
-        if not globalmsg.author.id in black:
-            if seclist.count(spamuser) >= 5:
-                black.append(spamuser)
-                await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-                msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
-            seclist = []
-    '''
+    try:
+        a = 1 / 0
+        aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께']
+        await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
+        if acnum >= len(aclist)-1: acnum = 0
+        else: acnum += 1
+        ping = round(1000 * client.latency)
+        if ping <= 100: pinglevel = '🔵 매우좋음'
+        elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
+        elif ping > 250 and ping <= 400: pinglevel = '🟡 보통'
+        elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
+        elif ping > 550: pinglevel = '⚫ 매우나쁨'
+        pinglogger.info(f'{ping}ms')
+        pinglogger.info(f'{db.open}')
+        dbip = config['dbIP']
+        pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
+        dbping = re.findall('\d+', pingcmd)[1]
+        temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
+        temp = temp[5:]
+        cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
+        cpulist = cpus.split('\n')[:-1]
+        mem = sshcmd('free -m')
+        if globalmsg != None:
+            if not globalmsg.author.id in black:
+                if seclist.count(spamuser) >= 5:
+                    black.append(spamuser)
+                    await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
+                seclist = []
     except Exception as ex:
-        if str(ex) != "name 'globalmsg' is not defined":
-            print(ex)
-    '''
+        traceback.print_exc()
 
 @client.event
 async def on_message(message):
