@@ -133,8 +133,11 @@ async def secloop():
         pinglogger.info(f'{ping}ms')
         pinglogger.info(f'{db.open}')
         dbip = config['dbIP']
-        pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
-        dbping = re.findall('\d+', pingcmd)[1]
+        if config['localRun'] == True:
+            dbping = '0ms (로컬 실행, 봇서버=데이터서버)'
+        else:
+            pingcmd = os.popen(f'ping -n 1 {dbip}').readlines()[-1]
+            dbping = re.findall('\d+', pingcmd)[1]
         temp = sshcmd('vcgencmd measure_temp') # CPU 온도 불러옴 (RPi 전용)
         temp = temp[5:]
         cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
@@ -147,7 +150,7 @@ async def secloop():
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
-    except Exception as ex:
+    except Exception:
         traceback.print_exc()
 
 @client.event

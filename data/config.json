@@ -10,6 +10,7 @@
     "sshFileName": "ssh.json",
     "openapiFileName": "openapi.json",
     "dbIP": "192.168.0.7",
+    "localRun": false,
     "botIconUrl": "http://salmon.arpa.kro.kr",
     "thumbnailUrl": "https://k.kakaocdn.net/dn/omoP0/btqB0fNhk6Q/a98du2XtKUkOISuUMPjIT1/icon.png?attach=1&knm=img.png",
     "color": {
