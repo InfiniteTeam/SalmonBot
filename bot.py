@@ -62,6 +62,7 @@ black = []
 acnum = 0
 
 starttime = datetime.datetime.now()
+globalmsg = None
 
 # =============== SSH connect ===============
 sshclient = paramiko.SSHClient()
@@ -150,7 +151,7 @@ async def secloop():
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
-    except Exception:
+    except Exception as ex:
         traceback.print_exc()
 
 @client.event
