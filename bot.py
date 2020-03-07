@@ -165,6 +165,47 @@ async def dbrecon():
         logger.info('DB RECONNECT DONE.')
 
 @client.event
+async def on_guild_join(guild):
+    if cur.execute('select * from serverdata where id=%s', guild.id) == 0: # 서버 자동 등록 및 공지채널 자동 찾기.
+        def search_noticechannel(): # 공지 및 봇 관련된 단어가 포함되어 있고 메시지 보내기 권한이 있는 채널을 찾음, 없으면 메시지 보내기 권한이 있는 맨 위 채널로 선택.
+            noticechs = []
+            freechannel = None
+            for channel in guild.text_channels:
+                if channel.permissions_for(guild.get_member(client.user.id)).send_messages:
+                    freechannel = channel
+                    if '공지' in channel.name and '봇' in channel.name:
+                        noticechs.append(channel)
+                        break
+                    elif 'noti' in channel.name.lower() and 'bot' in channel.name.lower():
+                        noticechs.append(channel)
+                        break
+                    elif '공지' in channel.name:
+                        noticechs.append(channel)
+                    elif 'noti' in channel.name.lower():
+                        noticechs.append(channel)
+                    elif '봇' in channel.name:
+                        noticechs.append(channel)
+                    elif 'bot' in channel.name.lower():
+                        noticechs.append(channel)
+            if noticechs == []:
+                noticechs.append(freechannel)
+
+            return noticechs[0]
+        
+        notich = search_noticechannel()
+        cur.execute('insert into serverdata values (%s, %s)', (guild.id, notich.id))
+        db.commit()
+        logger.info(f'새 서버: {guild.id}, 공지 채널: {notich.id}')
+        if notich != None:
+            await notich.send_message(f'안녕하세요! 연어봇을 서버에 초대해주셔서 감사합니다. `{prefix}도움`을 입력해 전체 명령어를 보실 수 있으며, `{prefix}공지채널` 명령으로 연어봇의 공지 채널을 변경할 수 있어요.')
+
+@client.event
+async def on_guild_remove(guild):
+    if cur.execute('select * from serverdata where id=%s', guild.id) == 1:
+        cur.execute('delect from serverdata where id=%s', guild.id)
+        logger.info(f'서버에서 제거됨: {guild.id}')
+
+@client.event
 async def on_message(message):
     global spamuser, globalmsg
     if message.author == client.user:
@@ -229,34 +270,6 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[미등록 사용자]', fwhere_server=serverid_or_type)
 
         elif userexist == 1: # 일반 사용자 명령어
-            if cur.execute('select * from serverdata where id=%s', message.guild.id) == 0: # 서버 자동 등록 및 공지채널 자동 찾기.
-                def search_noticechannel(): # 공지 및 봇 관련된 단어가 포함되어 있고 메시지 보내기 권한이 있는 채널을 찾음, 없으면 메시지 보내기 권한이 있는 맨 위 채널로 선택.
-                    noticech = []
-                    freechannel = None
-                    for channel in message.guild.text_channels:
-                        if channel.permissions_for(message.guild.get_member(client.user.id)).send_messages:
-                            freechannel = channel
-                            if '공지' in channel.name and '봇' in channel.name:
-                                noticech.append(channel)
-                                break
-                            elif 'noti' in channel.name.lower() and 'bot' in channel.name.lower():
-                                noticech.append(channel)
-                                break
-                            elif '공지' in channel.name:
-                                noticech.append(channel)
-                            elif 'noti' in channel.name.lower():
-                                noticech.append(channel)
-                            elif '봇' in channel.name:
-                                noticech.append(channel)
-                            elif 'bot' in channel.name.lower():
-                                noticech.append(channel)
-                    if noticech == []:
-                        noticech.append(freechannel)
-
-                    return noticech[0]
-                
-                cur.execute('insert into serverdata values (%s, %s)', (message.guild.id, search_noticechannel().id))
-                db.commit()
             if message.content == prefix + '등록':
                 await message.channel.send('이미 등록된 사용자입니다!')
                 msglog(message.author.id, message.channel.id, message.content, '[이미 등록된 사용자]', fwhere_server=serverid_or_type)
