@@ -16,6 +16,7 @@ import os
 import sys
 import urllib.request
 import traceback
+import inspect
 from salmonext import naver_search, pagecontrol, mastercommand
 
 # =============== Local Data Load ===============
@@ -98,12 +99,23 @@ logger.addHandler(log_streamh)
 log_fileh = logging.handlers.RotatingFileHandler('./logs/general/salmon.log', maxBytes=config['maxlogbytes'], backupCount=10)
 log_fileh.setFormatter(log_formatter)
 logger.addHandler(log_fileh)
+
 pinglogger = logging.getLogger('ping')
 pinglogger.setLevel(logging.INFO)
 ping_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ping_fileh = logging.handlers.RotatingFileHandler('./logs/ping/ping.log', maxBytes=config['maxlogbytes'], backupCount=10)
 ping_fileh.setFormatter(ping_formatter)
 pinglogger.addHandler(ping_fileh)
+
+errlogger = logging.getLogger('error')
+errlogger.setLevel(logging.DEBUG)
+err_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+err_streamh = logging.StreamHandler()
+err_streamh.setFormatter(err_formatter)
+errlogger.addHandler(err_streamh)
+err_fileh = logging.handlers.RotatingFileHandler('./logs/general/error.log', maxBytes=config['maxlogbytes'], backupCount=10)
+err_fileh.setFormatter(err_formatter)
+errlogger.addHandler(err_fileh)
 
 logger.info('========== START ==========')
 logger.info('Data Load Complete.')
@@ -152,14 +164,15 @@ async def secloop():
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
-    except Exception:
+    except BaseException:
         traceback.print_exc()
 
 @tasks.loop(seconds=1)
 async def dbrecon():
     try:
         db.ping(reconnect=False)
-    except:
+    except BaseException:
+        traceback.print_exc()
         logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
         logger.info('DB RECONNECT DONE.')
@@ -208,6 +221,9 @@ async def on_guild_remove(guild):
 @client.event
 async def on_error(event, *args, **kwargs):
     print(event, args, kwargs)
+    print('========================================')
+
+    print(inspect.getinnerframes(sys.exc_info()[2]))
 
 @client.event
 async def on_message(message):
