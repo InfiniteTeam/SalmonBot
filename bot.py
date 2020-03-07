@@ -115,6 +115,7 @@ client = discord.Client()
 async def on_ready():
     logger.info(f'Logged in as {client.user}')
     secloop.start()
+    dbrecon.start()
     #await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
 
 @tasks.loop(seconds=5)
@@ -154,6 +155,15 @@ async def secloop():
     except Exception:
         traceback.print_exc()
 
+@tasks.loop(seconds=1)
+async def dbrecon():
+    try:
+        db.ping(reconnect=False)
+    except:
+        logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
+        db.ping(reconnect=True)
+        logger.info('DB RECONNECT DONE.')
+
 @client.event
 async def on_message(message):
     global spamuser, globalmsg
@@ -165,14 +175,15 @@ async def on_message(message):
         return
     if message.content == prefix:
         return
-    # 서버인지 아닌지 확인
-    if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type
-    else: serverid_or_type = message.guild.id
-    # 권한 확인
-    myperms = message.channel.permissions_for(message.guild.get_member(client.user.id))
     
     # 일반 사용자 커맨드.
     if message.content.startswith(prefix):
+        # 서버인지 아닌지 확인
+        if message.channel.type == discord.ChannelType.group or message.channel.type == discord.ChannelType.private: serverid_or_type = message.channel.type
+        else: serverid_or_type = message.guild.id
+        # 권한 확인
+        myperms = message.channel.permissions_for(message.guild.get_member(client.user.id))
+        # DB 재연결
         if config['inspection'] == True:
             if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 0:
                 await message.channel.send('현재 점검중이거나, 기능 추가 중입니다. 안정적인 봇 이용을 위해 잠시 기다려주세요.')
@@ -243,13 +254,15 @@ async def on_message(message):
                         noticech.append(freechannel)
 
                     return noticech[0]
-                    
+                
                 cur.execute('insert into serverdata values (%s, %s)', (message.guild.id, search_noticechannel().id))
                 db.commit()
             if message.content == prefix + '등록':
                 await message.channel.send('이미 등록된 사용자입니다!')
+                msglog(message.author.id, message.channel.id, message.content, '[이미 등록된 사용자]', fwhere_server=serverid_or_type)
             elif message.content == prefix + '블랙':
                 await message.channel.send(str(black))
+                msglog(message.author.id, message.channel.id, message.content, '[블랙 추가]', fwhere_server=serverid_or_type)
             elif message.content == prefix + '샌즈':
                 await message.guild.get_member(message.author.id).move_to(message.guild.get_channel(598454531600285706))
                 msglog(message.author.id, message.channel.id, message.content, '[와 샌즈]', fwhere_server=serverid_or_type)
@@ -280,6 +293,7 @@ async def on_message(message):
                             msglog(msg.author.id, msg.channel.id, msg.content, '[탈퇴: 이미 탈퇴됨]', fwhere_server=serverid_or_type)
                     else:
                         await message.channel.send('취소되었습니다. 정확히 `탈퇴`를 입력해주세요!')
+                        msglog(message.author.id, message.channel.id, message.content, '[탈퇴: 취소됨]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '도움':
                 helpstr_salmonbot = f"""\
@@ -300,7 +314,7 @@ async def on_message(message):
                 embed.add_field(name='네이버 오픈 API', inline=False, value=helpstr_naverapi)
                 
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[정보]', fwhere_server=serverid_or_type)
+                msglog(message.author.id, message.channel.id, message.content, '[도움]', fwhere_server=serverid_or_type)
             
             elif message.content == prefix + '정보':
                 embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
@@ -344,7 +358,7 @@ async def on_message(message):
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
+                msglog(message.author.id, message.channel.id, message.content, '[업타임]', fwhere_server=serverid_or_type)
 
             elif message.content == prefix + '봇권한':
                 if type(serverid_or_type) == int:
