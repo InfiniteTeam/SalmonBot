@@ -62,7 +62,7 @@ black = []
 acnum = 0
 
 starttime = datetime.datetime.now()
-globalmsg = None
+message = None
 
 # =============== SSH connect ===============
 sshclient = paramiko.SSHClient()
@@ -145,12 +145,12 @@ async def secloop():
         cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
         cpulist = cpus.split('\n')[:-1]
         mem = sshcmd('free -m')
-        if globalmsg != None:
-            if not globalmsg.author.id in black:
+        if message != None:
+            if not message.author.id in black:
                 if seclist.count(spamuser) >= 5:
                     black.append(spamuser)
-                    await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
+                    await message.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+                    msglog(message.author.id, message.channel.id, message.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
     except Exception:
         traceback.print_exc()
@@ -206,8 +206,12 @@ async def on_guild_remove(guild):
         logger.info(f'서버에서 제거됨: {guild.id}')
 
 @client.event
+async def on_error(event, *args, **kwargs):
+    print(event, args, kwargs)
+
+@client.event
 async def on_message(message):
-    global spamuser, globalmsg
+    global spamuser, message
     if message.author == client.user:
         return
     if message.author.bot:
@@ -229,7 +233,6 @@ async def on_message(message):
             if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 0:
                 await message.channel.send('현재 점검중이거나, 기능 추가 중입니다. 안정적인 봇 이용을 위해 잠시 기다려주세요.')
                 return
-        globalmsg = message
         spamuser = message.author.id
         seclist.append(spamuser)
         def checkmsg(m):
@@ -314,6 +317,9 @@ async def on_message(message):
                     `{prefix}정보`: 봇 정보를 확인합니다.
                     `{prefix}핑`: 봇 지연시간을 확인합니다.
                     `{prefix}서버상태 데이터서버`: 데이터서버의 CPU 점유율, 메모리 사용량 및 데이터베이스 연결 상태를 확인합니다.
+                    `{prefix}봇권한 서버`: 현재 서버에서 {botname}이 가진 권한을 확인합니다.
+                    `{prefix}봇권한 채널 [채널 멘션]`: 서버 채널에서 {botname}이 가진 권한을 확인합니다.
+                    `{prefix}봇권한 채널목록`: 서버 채널에서 {botname}이 접근(읽기/쓰기/듣기/말하기)할 수 있는 채널 목록을 확인합니다.
                     """
                 helpstr_naverapi = f"""\
                     `{prefix}네이버검색 (블로그/뉴스/책/백과사전) (검색어) [&&최신순/&&정확도순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
@@ -373,53 +379,55 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[업타임]', fwhere_server=serverid_or_type)
 
-            elif message.content == prefix + '봇권한':
-                if type(serverid_or_type) == int:
-                    botperm_section1 = f"""\
-                        초대 만들기: `{myperms.create_instant_invite}`
-                        사용자 추방: `{myperms.kick_members}`
-                        사용자 차단: `{myperms.ban_members}`
-                        관리자 권한: `{myperms.administrator}`
-                        채널 관리: `{myperms.manage_channels}`
-                        서버 관리: `{myperms.manage_guild}`
-                        반응 추가: `{myperms.add_reactions}`
-                        감사 로그 보기: `{myperms.view_audit_log}`
-                        우선 발언권: `{myperms.priority_speaker}`
-                        음성 채널에서 방송: `{myperms.stream}`
-                        메시지 보기: `{myperms.read_messages}`
-                        메시지 전송: `{myperms.send_messages}`
-                        TTS 메시지 전송: `{myperms.send_tts_messages}`
-                        메시지 관리: `{myperms.manage_messages}`
-                        파일 전송: `{myperms.attach_files}`
-                        
-                        """
-                    botperm_section2 = f"""\
-                        메시지 기록 보기: `{myperms.read_message_history}`
-                        `@everyone` 멘션: `{myperms.mention_everyone}`
-                        확장 이모지: `{myperms.external_emojis}`
-                        길드 정보 보기: `{myperms.view_guild_insights}`
-                        음성 채널 연결: `{myperms.connect}`
-                        음성 채널에서 발언: `{myperms.speak}`
-                        다른 멤버 마이크 음소거: `{myperms.mute_members}`
-                        다른 멤버 헤드폰 음소거: `{myperms.deafen_members}`
-                        다른 음성 채널로 멤버 옮기기: `{myperms.move_members}`
-                        음성 감지 사용: `{myperms.use_voice_activation}`
-                        내 닉네임 변경: `{myperms.change_nickname}`
-                        다른 멤버 닉네임 변경: `{myperms.manage_nicknames}`
-                        역할 관리: `{myperms.manage_roles}`
-                        권한 관리: `{myperms.manage_permissions}`
-                        웹훅 관리: `{myperms.manage_webhooks}`
-                        이모지 관리: `{myperms.manage_emojis}`
-                        """
-                    embed=discord.Embed(title='🔐 연어봇 권한', description='현재 서버에서 연어봇이 가진 권한입니다.', color=color['salmon'], timestamp=datetime.datetime.utcnow())
-                    embed.set_author(name=botname, icon_url=boticon)
-                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                    embed.add_field(name='ㅤ', value=botperm_section1)
-                    embed.add_field(name='ㅤ', value=botperm_section2)
-                    await message.channel.send(embed=embed)
-                    msglog(message.author.id, message.channel.id, message.content, '[봇권한]', fwhere_server=serverid_or_type)
+            elif message.content.startswith(prefix + '봇권한'):
+                if message.conetnt == prefix + '봇권한 서버':
+                    if type(serverid_or_type) == int:
+                        botperm_server = f"""\
+                            초대 코드 만들기: `{myperms.create_instant_invite}`
+                            사용자 추방: `{myperms.kick_members}`
+                            사용자 차단: `{myperms.ban_members}`
+                            관리자 권한: `{myperms.administrator}`
+                            채널 관리: `{myperms.manage_channels}`
+                            서버 관리: `{myperms.manage_guild}`
+                            반응 추가: `{myperms.add_reactions}`
+                            감사 로그 보기: `{myperms.view_audit_log}`
+                            우선 발언권: `{myperms.priority_speaker}`
+                            음성 채널에서 방송: `{myperms.stream}`
+                            
+                            """
+                        botperm_thischannel = f"""\
+                            메시지 읽기: `{myperms.read_messages}`
+                            메시지 보내기: `{myperms.send_messages}`
+                            TTS 메시지 보내기: `{myperms.send_tts_messages}`
+                            메시지 관리: `{myperms.manage_messages}`
+                            파일 전송: `{myperms.attach_files}`
+                            메시지 기록 보기: `{myperms.read_message_history}`
+                            `@everyone` 멘션: `{myperms.mention_everyone}`
+                            확장 이모지: `{myperms.external_emojis}`
+                            길드 정보 보기: `{myperms.view_guild_insights}`
+                            음성 채널 연결: `{myperms.connect}`
+                            음성 채널에서 발언: `{myperms.speak}`
+                            다른 멤버 마이크 음소거: `{myperms.mute_members}`
+                            다른 멤버 헤드폰 음소거: `{myperms.deafen_members}`
+                            다른 음성 채널로 멤버 옮기기: `{myperms.move_members}`
+                            음성 감지 사용: `{myperms.use_voice_activation}`
+                            내 닉네임 변경: `{myperms.change_nickname}`
+                            다른 멤버 닉네임 변경: `{myperms.manage_nicknames}`
+                            역할 관리: `{myperms.manage_roles}`
+                            권한 관리: `{myperms.manage_permissions}`
+                            웹훅 관리: `{myperms.manage_webhooks}`
+                            이모지 관리: `{myperms.manage_emojis}`
+                            """
+                        embed=discord.Embed(title='🔐 연어봇 권한', description='현재 서버에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        embed.add_field(name='ㅤ', value=botperm_server)
+                        await message.channel.send(embed=embed)
+                        msglog(message.author.id, message.channel.id, message.content, '[봇권한: 서버]', fwhere_server=serverid_or_type)
+                    else:
+                        await message.channel.send(embed=onlyguild(where=serverid_or_type))
                 else:
-                    await message.channel.send(embed=onlyguild(where=serverid_or_type))
+                    await message.channel.send(embed=notexists(serverid_or_type))
 
             elif message.content == prefix + '서버상태 데이터서버':
                 dbalive = None
@@ -506,7 +514,7 @@ async def on_message(message):
                         try:
                             naverblogsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverblogsc == 429:
@@ -560,7 +568,7 @@ async def on_message(message):
                         try:
                             navernewssc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if navernewssc == 429:
@@ -614,7 +622,7 @@ async def on_message(message):
                         try:
                             naverbooksc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverbooksc == 429:
@@ -668,7 +676,7 @@ async def on_message(message):
                         try:
                             naverencycsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverencycsc == 429:
@@ -768,6 +776,8 @@ async def on_message(message):
                                         
                             msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]', fwhere_server=serverid_or_type)
 
+                else: await message.channel.send(embed=notexists(serverid_or_type))
+
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
                     if message.content == prefix + '//i t':
@@ -817,19 +827,15 @@ async def on_message(message):
                             await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
-                        await globalmsg.channel.send(embed=errormsg('TEST', serverid_or_type))
+                        await message.channel.send(embed=errormsg('TEST', serverid_or_type))
 
             elif message.content[len(prefix)] == '%': pass
 
-            else:
-                embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=botname, icon_url=boticon)
-                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어]', fwhere_server=serverid_or_type)
+            else: await message.channel.send(embed=notexists(serverid_or_type))
+                
         
         else:
-            await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
+            await message.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
             
 
 # 메시지 로그 출력기 - 
@@ -847,15 +853,21 @@ def msglog(fwho, fwhere_channel, freceived, fsent, fetc=None, fwhere_server=None
 def errormsg(error, where='idk', why=''):
     embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
-    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, f'[오류: {error}]', fwhere_server=where)
+    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+    msglog(message.author.id, message.channel.id, message.content, f'[오류: {error}]', fwhere_server=where)
     return embed
 
 def onlyguild(where='idk'):
     embed=discord.Embed(title='**❌ 서버에서만 사용 가능한 명령입니다!**', description='DM이나 그룹 메시지에서는 사용할 수 없어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
-    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=where)
+    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+    msglog(message.author.id, message.channel.id, message.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=where)
     return embed
+
+def notexists(where='idk'):
+    embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    embed.set_author(name=botname, icon_url=boticon)
+    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+    msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어]', fwhere_server=where)
 
 client.run(token)
