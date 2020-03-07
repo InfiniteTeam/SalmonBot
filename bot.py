@@ -62,7 +62,7 @@ black = []
 acnum = 0
 
 starttime = datetime.datetime.now()
-message = None
+globalmsg = None
 
 # =============== SSH connect ===============
 sshclient = paramiko.SSHClient()
@@ -145,12 +145,12 @@ async def secloop():
         cpus = sshcmd("mpstat -P ALL | tail -5 | awk '{print 100-$NF}'") # CPU별 사용량 불러옴
         cpulist = cpus.split('\n')[:-1]
         mem = sshcmd('free -m')
-        if message != None:
-            if not message.author.id in black:
+        if globalmsg != None:
+            if not globalmsg.author.id in black:
                 if seclist.count(spamuser) >= 5:
                     black.append(spamuser)
-                    await message.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
-                    msglog(message.author.id, message.channel.id, message.content, '[차단됨. 사유: 명령어 도배]')
+                    await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
+                    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
     except Exception:
         traceback.print_exc()
@@ -211,7 +211,7 @@ async def on_error(event, *args, **kwargs):
 
 @client.event
 async def on_message(message):
-    global spamuser, message
+    global spamuser, globalmsg
     if message.author == client.user:
         return
     if message.author.bot:
@@ -233,6 +233,7 @@ async def on_message(message):
             if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 0:
                 await message.channel.send('현재 점검중이거나, 기능 추가 중입니다. 안정적인 봇 이용을 위해 잠시 기다려주세요.')
                 return
+        globalmsg = message
         spamuser = message.author.id
         seclist.append(spamuser)
         def checkmsg(m):
@@ -514,7 +515,7 @@ async def on_message(message):
                         try:
                             naverblogsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverblogsc == 429:
@@ -568,7 +569,7 @@ async def on_message(message):
                         try:
                             navernewssc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if navernewssc == 429:
@@ -622,7 +623,7 @@ async def on_message(message):
                         try:
                             naverbooksc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverbooksc == 429:
@@ -676,7 +677,7 @@ async def on_message(message):
                         try:
                             naverencycsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverencycsc == 429:
@@ -827,7 +828,7 @@ async def on_message(message):
                             await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
-                        await message.channel.send(embed=errormsg('TEST', serverid_or_type))
+                        await globalmsg.channel.send(embed=errormsg('TEST', serverid_or_type))
 
             elif message.content[len(prefix)] == '%': pass
 
@@ -835,7 +836,7 @@ async def on_message(message):
                 
         
         else:
-            await message.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
+            await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
             
 
 # 메시지 로그 출력기 - 
@@ -853,21 +854,21 @@ def msglog(fwho, fwhere_channel, freceived, fsent, fetc=None, fwhere_server=None
 def errormsg(error, where='idk', why=''):
     embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-    msglog(message.author.id, message.channel.id, message.content, f'[오류: {error}]', fwhere_server=where)
+    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
+    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, f'[오류: {error}]', fwhere_server=where)
     return embed
 
 def onlyguild(where='idk'):
     embed=discord.Embed(title='**❌ 서버에서만 사용 가능한 명령입니다!**', description='DM이나 그룹 메시지에서는 사용할 수 없어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-    msglog(message.author.id, message.channel.id, message.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=where)
+    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
+    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[서버에서만 사용 가능한 명령어]', fwhere_server=where)
     return embed
 
 def notexists(where='idk'):
     embed=discord.Embed(title='**❌ 존재하지 않는 명령입니다!**', description=f'`{prefix}도움`을 입력해서 전체 명령어를 볼 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-    msglog(message.author.id, message.channel.id, message.content, '[존재하지 않는 명령어]', fwhere_server=where)
+    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
+    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[존재하지 않는 명령어]', fwhere_server=where)
 
 client.run(token)
