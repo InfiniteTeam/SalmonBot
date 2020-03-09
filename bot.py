@@ -221,9 +221,8 @@ async def on_guild_remove(guild):
 @client.event
 async def on_error(event, *args, **kwargs):
     print(event, args, kwargs)
-    print('========================================')
-
-    print(inspect.getinnerframes(sys.exc_info()[2]))
+    excinfo = sys.exc_info()
+    errlogger.error(f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}\n=========================')
 
 @client.event
 async def on_message(message):
@@ -397,8 +396,8 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[업타임]', fwhere_server=serverid_or_type)
 
             elif message.content.startswith(prefix + '봇권한'):
-                if message.conetnt == prefix + '봇권한 서버':
-                    if type(serverid_or_type) == int:
+                if type(serverid_or_type) == int:
+                    if message.content == prefix + '봇권한 서버':
                         botperm_server = f"""\
                             초대 코드 만들기: `{myperms.create_instant_invite}`
                             사용자 추방: `{myperms.kick_members}`
@@ -410,9 +409,16 @@ async def on_message(message):
                             감사 로그 보기: `{myperms.view_audit_log}`
                             우선 발언권: `{myperms.priority_speaker}`
                             음성 채널에서 방송: `{myperms.stream}`
-                            
                             """
-                        botperm_thischannel = f"""\
+                        embed=discord.Embed(title='🔐 연어봇 권한 - 서버', description='현재 서버에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        embed.add_field(name='ㅤ', value=botperm_server)
+                        await message.channel.send(embed=embed)
+                        msglog(message.author.id, message.channel.id, message.content, '[봇권한: 서버]', fwhere_server=serverid_or_type)
+
+                    if message.content == prefix + '봇권한 채널':
+                        botperm_thischannel1 = f"""\
                             메시지 읽기: `{myperms.read_messages}`
                             메시지 보내기: `{myperms.send_messages}`
                             TTS 메시지 보내기: `{myperms.send_tts_messages}`
@@ -424,6 +430,8 @@ async def on_message(message):
                             길드 정보 보기: `{myperms.view_guild_insights}`
                             음성 채널 연결: `{myperms.connect}`
                             음성 채널에서 발언: `{myperms.speak}`
+                            """
+                        botperm_thischannel2 = f"""\
                             다른 멤버 마이크 음소거: `{myperms.mute_members}`
                             다른 멤버 헤드폰 음소거: `{myperms.deafen_members}`
                             다른 음성 채널로 멤버 옮기기: `{myperms.move_members}`
@@ -435,16 +443,18 @@ async def on_message(message):
                             웹훅 관리: `{myperms.manage_webhooks}`
                             이모지 관리: `{myperms.manage_emojis}`
                             """
-                        embed=discord.Embed(title='🔐 연어봇 권한', description='현재 서버에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
+                        embed=discord.Embed(title='🔐 연어봇 권한 - 채널', description='현재 채널에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        embed.add_field(name='ㅤ', value=botperm_server)
+                        embed.add_field(name='ㅤ', value=botperm_thischannel1)
+                        embed.add_field(name='ㅤ', value=botperm_thischannel2)
                         await message.channel.send(embed=embed)
-                        msglog(message.author.id, message.channel.id, message.content, '[봇권한: 서버]', fwhere_server=serverid_or_type)
+                        msglog(message.author.id, message.channel.id, message.content, '[봇권한: 채널]', fwhere_server=serverid_or_type)
+
                     else:
-                        await message.channel.send(embed=onlyguild(where=serverid_or_type))
+                        await message.channel.send(embed=notexists(serverid_or_type))
                 else:
-                    await message.channel.send(embed=notexists(serverid_or_type))
+                    await message.channel.send(embed=onlyguild(where=serverid_or_type))
 
             elif message.content == prefix + '서버상태 데이터서버':
                 dbalive = None
@@ -886,5 +896,6 @@ def notexists(where='idk'):
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
     msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, '[존재하지 않는 명령어]', fwhere_server=where)
+    return embed
 
 client.run(token)
