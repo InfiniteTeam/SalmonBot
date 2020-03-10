@@ -884,7 +884,7 @@ async def on_message(message):
                                     await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
-                        await globalmsg.channel.send(embed=errormsg('TEST', message))
+                        raise Exception('TEST')
             elif message.content[len(prefix)] == '%': pass
             else: await message.channel.send(embed=notexists())
         else:
@@ -904,7 +904,7 @@ def msglog(fwho, fwhere_channel, freceived, fsent, fetc=None):
     logger.info(logline)
 
 def errormsg(error, msg):
-    embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 개발자가 오류 기록을 발견하면 처리하게 됩니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
     embed.set_footer(text=msg.author, icon_url=msg.author.avatar_url)
     msglog(msg.author.id, msg.channel.id, msg.content, f'[오류: {error}]')
