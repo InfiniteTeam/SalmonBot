@@ -27,8 +27,12 @@ with open('./data/version.json', encoding='utf-8') as version_file:
 
 # IMPORTant data
 if platform.system() == 'Windows':
-    with open('C:/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
-        token = token_file.readline()
+    if config['betamode'] == False:
+        with open('C:/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
+            token = token_file.readline()
+    else:
+        with open('C:/salmonbot/' + config['betatokenFileName'], encoding='utf-8') as token_file:
+            token = token_file.readline()
     with open('C:/salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
     with open('C:/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
@@ -36,8 +40,12 @@ if platform.system() == 'Windows':
     with open('C:/salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
         openapi = json.load(openapi_file)
 elif platform.system() == 'Linux':
-    with open('/home/pi/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
-        token = token_file.readline()
+    if config['betamode'] == False:
+        with open('/home/pi/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
+            token = token_file.readline()
+    else:
+        with open('/home/pi/salmonbot/' + config['betatokenFileName'], encoding='utf-8') as token_file:
+            token = token_file.readline()
     with open('/home/pi/salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
     with open('/home/pi/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
@@ -81,7 +89,8 @@ db = pymysql.connect(
     user=dbac['dbUser'],
     password=dbac['dbPassword'],
     db=dbac['dbName'],
-    charset='utf8'
+    charset='utf8',
+    autocommit=True
 )
 cur = db.cursor(pymysql.cursors.DictCursor)
 
@@ -126,6 +135,8 @@ client = discord.Client()
 @client.event
 async def on_ready():
     logger.info(f'Logged in as {client.user}')
+    if config['betamode'] == True:
+        logger.warning(f'BETA MODE ENABLED.')
     secloop.start()
     dbrecon.start()
     #await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
@@ -194,12 +205,16 @@ async def on_guild_join(guild):
                         break
                     elif '공지' in channel.name:
                         noticechs.append(channel)
+                        break
                     elif 'noti' in channel.name.lower():
                         noticechs.append(channel)
+                        break
                     elif '봇' in channel.name:
                         noticechs.append(channel)
+                        break
                     elif 'bot' in channel.name.lower():
                         noticechs.append(channel)
+                        break
             if noticechs == []:
                 noticechs.append(freechannel)
 
@@ -207,15 +222,14 @@ async def on_guild_join(guild):
         
         notich = search_noticechannel()
         cur.execute('insert into serverdata values (%s, %s)', (guild.id, notich.id))
-        db.commit()
         logger.info(f'새 서버: {guild.id}, 공지 채널: {notich.id}')
         if notich != None:
-            await notich.send_message(f'안녕하세요! 연어봇을 서버에 초대해주셔서 감사합니다. `{prefix}도움`을 입력해 전체 명령어를 보실 수 있으며, `{prefix}공지채널` 명령으로 연어봇의 공지 채널을 변경할 수 있어요.')
+            await notich.send(f'안녕하세요! 연어봇을 서버에 초대해주셔서 감사합니다. `{prefix}도움`을 입력해 전체 명령어를 보실 수 있으며, `{prefix}공지채널` 명령으로 연어봇의 공지 채널을 변경할 수 있어요.')
 
 @client.event
 async def on_guild_remove(guild):
     if cur.execute('select * from serverdata where id=%s', guild.id) == 1:
-        cur.execute('delect from serverdata where id=%s', guild.id)
+        cur.execute('delete from serverdata where id=%s', guild.id)
         logger.info(f'서버에서 제거됨: {guild.id}')
 
 @client.event
@@ -272,7 +286,6 @@ async def on_message(message):
                         if cur.execute('select * from userdata where id=%s', (msg.author.id)) == 0:
                             now = datetime.datetime.now()
                             if cur.execute('insert into userdata values (%s, %s, %s, %s)', (msg.author.id, 1, 'User', datetime.date(now.year, now.month, now.day))) == 1:
-                                db.commit()
                                 await message.channel.send(f'등록되었습니다. `{prefix}도움` 명령으로 전체 명령을 볼 수 있습니다.')
                                 msglog(message.author.id, message.channel.id, message.content, '[등록: 등록 완료]', fwhere_server=serverid_or_type)
                         else:
@@ -317,7 +330,6 @@ async def on_message(message):
                     if msg.content == '탈퇴':
                         if cur.execute('select * from userdata where id=%s', message.author.id) == 1:
                             cur.execute('delete from userdata where id=%s', message.author.id)
-                            db.commit()
                             await message.channel.send('탈퇴되었으며 모든 사용자 데이터가 삭제되었습니다.')
                             msglog(msg.author.id, msg.channel.id, msg.content, '[탈퇴: 완료]', fwhere_server=serverid_or_type)
                         else:
@@ -369,6 +381,7 @@ async def on_message(message):
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[핑]', fwhere_server=serverid_or_type)
+                print(embed.to_dict())
 
             elif message.content == prefix + '업타임':
                 uptimenow = re.findall('\d+', str(datetime.datetime.now() - starttime))
@@ -417,7 +430,11 @@ async def on_message(message):
                         await message.channel.send(embed=embed)
                         msglog(message.author.id, message.channel.id, message.content, '[봇권한: 서버]', fwhere_server=serverid_or_type)
 
-                    if message.content == prefix + '봇권한 채널':
+                    elif message.content.startswith(prefix + '봇권한 채널'):
+                        whpermch = message.channel
+                        if len(message.channel_mentions) >= 1:
+                            whpermch = message.channel_mentions[0]
+                            myperms = message.channel_mentions[0].permissions_for(message.guild.get_member(client.user.id))
                         botperm_thischannel1 = f"""\
                             메시지 읽기: `{myperms.read_messages}`
                             메시지 보내기: `{myperms.send_messages}`
@@ -443,7 +460,7 @@ async def on_message(message):
                             웹훅 관리: `{myperms.manage_webhooks}`
                             이모지 관리: `{myperms.manage_emojis}`
                             """
-                        embed=discord.Embed(title='🔐 연어봇 권한 - 채널', description='현재 채널에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
+                        embed=discord.Embed(title='🔐 연어봇 권한 - 채널', description=f'{whpermch.mention} 채널에서 연어봇이 가진 권한입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         embed.add_field(name='ㅤ', value=botperm_thischannel1)
@@ -851,16 +868,16 @@ async def on_message(message):
                         servers = cur.fetchall()
                         await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
                         for notichannel in servers:
-                            await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
+                            notiguild = client.get_guild(notichannel['id'])
+                            if notiguild != None:
+                                notiguildchannel = notiguild.get_channel(notichannel['noticechannel'])
+                                if notiguildchannel.permissions_for(notiguild.get_member(client.user.id)).send_messages:
+                                    await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
                         await globalmsg.channel.send(embed=errormsg('TEST', serverid_or_type))
-
             elif message.content[len(prefix)] == '%': pass
-
             else: await message.channel.send(embed=notexists(serverid_or_type))
-                
-        
         else:
             await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
             
