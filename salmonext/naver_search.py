@@ -194,3 +194,34 @@ def movieEmbed(jsonresults, page, perpage, color, query, naversort):
     buildhour12 = builddate.strftime('%I')
     embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
     return embed
+
+def cafeEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍🎬 네이버 카페글 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= results['total']:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            description = results['items'][page*perpage+pgindex]['description']
+            if description == '':
+                description = '(설명 없음)'
+            cafename = results['items'][page*perpage+pgindex]['cafename']
+            cafeurl = results['items'][page*perpage+pgindex]['cafeurl']
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{cafename}]({cafeurl})*", inline=False)
+        else:
+            break
+    if results['total'] > 100: max100 = ' 중 상위 100건'
+    else: max100 = ''
+    if results['total'] < perpage: allpage = 0
+    else: 
+        if max100: allpage = (100-1)//perpage
+        else: allpage = (results['total']-1)//perpage
+    builddateraw = results['lastBuildDate']
+    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+    if builddate.strftime('%p') == 'AM':
+        builddayweek = '오전'
+    elif builddate.strftime('%p') == 'PM':
+        builddayweek = '오후'
+    buildhour12 = builddate.strftime('%I')
+    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    return embed

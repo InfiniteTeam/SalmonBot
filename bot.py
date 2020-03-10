@@ -235,8 +235,11 @@ async def on_guild_remove(guild):
 @client.event
 async def on_error(event, *args, **kwargs):
     print(event, args, kwargs)
+    print(args[0].content)
     excinfo = sys.exc_info()
-    errlogger.error(f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}\n=========================')
+    errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
+    errlogger.error(errstr + '\n=========================')
+    await args[0].channel.send(embed=errormsg(errstr, args[0]))
 
 @client.event
 async def on_message(message):
@@ -558,7 +561,7 @@ async def on_message(message):
                         try:
                             naverblogsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverblogsc == 429:
@@ -612,7 +615,7 @@ async def on_message(message):
                         try:
                             navernewssc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if navernewssc == 429:
@@ -666,7 +669,7 @@ async def on_message(message):
                         try:
                             naverbooksc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverbooksc == 429:
@@ -720,7 +723,7 @@ async def on_message(message):
                         try:
                             naverencycsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if naverencycsc == 429:
@@ -774,7 +777,7 @@ async def on_message(message):
                         try:
                             navermoviesc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='movie', query=query, sort=naversortcode)
                         except Exception as ex:
-                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', serverid_or_type))
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                         else:
                             if navermoviesc == 429:
@@ -875,11 +878,11 @@ async def on_message(message):
                                     await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
-                        await globalmsg.channel.send(embed=errormsg('TEST', serverid_or_type))
+                        await globalmsg.channel.send(embed=errormsg('TEST', message))
             elif message.content[len(prefix)] == '%': pass
             else: await message.channel.send(embed=notexists(serverid_or_type))
         else:
-            await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', serverid_or_type))
+            await globalmsg.channel.send(embed=errormsg('DB.FOUND_DUPLICATE_USER', message))
             
 
 # 메시지 로그 출력기 - 
@@ -894,11 +897,11 @@ def msglog(fwho, fwhere_channel, freceived, fsent, fetc=None, fwhere_server=None
         logline = f'[ServerID:] {fwhere_server}, [ChannelID:] {fwhere_channel}, [Author:] {fwho}, [RCV:] {freceived}, [Sent:] {fsent}, [etc:] {fetc}'
     logger.info(logline)
 
-def errormsg(error, where='idk', why=''):
+def errormsg(error, msg):
     embed=discord.Embed(title='**❌ 무언가 오류가 발생했습니다!**', description=f'오류가 기록되었습니다. 시간이 되신다면, 오류 정보를 개발자에게 알려주시면 감사하겠습니다.\n오류 코드: ```{error}```', color=color['error'], timestamp=datetime.datetime.utcnow())
     embed.set_author(name=botname, icon_url=boticon)
-    embed.set_footer(text=globalmsg.author, icon_url=globalmsg.author.avatar_url)
-    msglog(globalmsg.author.id, globalmsg.channel.id, globalmsg.content, f'[오류: {error}]', fwhere_server=where)
+    embed.set_footer(text=msg.author, icon_url=msg.author.avatar_url)
+    msglog(msg.author.id, msg.channel.id, msg.content, f'[오류: {error}]', fwhere_server=msg.guild.id)
     return embed
 
 def onlyguild(where='idk'):
