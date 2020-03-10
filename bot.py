@@ -53,6 +53,14 @@ elif platform.system() == 'Linux':
     with open('/home/pi/salmonbot/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
         openapi = json.load(openapi_file)
 
+# mkdir
+if not os.path.exists('./logs'):
+    os.makedirs('./logs')
+if not os.path.exists('./logs/general'):
+    os.makedirs('./logs/general')
+if not os.path.exists('./logs/ping'):
+    os.makedirs('./logs/ping')
+
 botname = config['botName']
 prefix = config['prefix']
 activity = config['activity']
