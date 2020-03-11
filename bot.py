@@ -188,6 +188,7 @@ async def secloop():
 
 @tasks.loop(seconds=1)
 async def dbrecon():
+    startdb = time.time()
     try:
         db.ping(reconnect=False)
     except BaseException:
@@ -195,6 +196,8 @@ async def dbrecon():
         logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
         logger.info('DB RECONNECT DONE.')
+    enddb = startdb = time.time()
+    print(enddb-startdb)
 
 @client.event
 async def on_guild_join(guild):
@@ -245,7 +248,7 @@ async def on_error(event, *args, **kwargs):
     print(event, args, kwargs)
     print(args[0].content)
     excinfo = sys.exc_info()
-    errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
+    errstr = discord.utils.escape_markdown(f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}')
     errlogger.error(errstr + '\n=========================')
     await args[0].channel.send(embed=errormsg(errstr, args[0]))
 
@@ -830,6 +833,60 @@ async def on_message(message):
                                                     navermovieembed.set_author(name=botname, icon_url=boticon)
                                                     navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await navermovieresult.edit(embed=navermovieembed)
+                                            elif pagect[0] == None: break
+                                            
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]')
+
+                    elif searchstr.startswith(prefix + '네이버검색 카페글'):
+                        cmdlen = 9
+                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                            page = 0
+                            query = searchstr[len(prefix)+1+cmdlen:]
+                            try:
+                                navercafesc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='cafearticle', query=query, sort=naversortcode)
+                            except Exception as ex:
+                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
+                            else:
+                                if navercafesc == 429:
+                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]')
+                                elif type(navercafesc) == int:
+                                    await message.channel.send(f'오류! 코드: {navercafesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]')
+                                elif navercafesc['total'] == 0:
+                                    await message.channel.send('검색 결과가 없습니다!')
+                                else:
+                                    
+                                    if navercafesc['total'] < 4: navercafeallpage = 0
+                                    else: 
+                                        if navercafesc['total'] > 100: navercafeallpage = (100-1)//4
+                                        else: navercafeallpage = (navercafesc['total']-1)//4
+                                    navercafeembed = naver_search.cafeEmbed(jsonresults=navercafesc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                    navercafeembed.set_author(name=botname, icon_url=boticon)
+                                    navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                    navercaferesult = await message.channel.send(embed=navercafeembed)
+                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                        await navercaferesult.add_reaction(emoji)
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색]')
+                                    while True:
+                                        msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]')
+                                        naverresult = navercaferesult
+                                        try:
+                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                        except asyncio.TimeoutError:
+                                            await navercaferesult.clear_reactions()
+                                            break
+                                        else:
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navercaferesult, allpage=navercafeallpage, perpage=4, nowpage=page)
+                                            await pagect[1]
+                                            if type(pagect[0]) == int:
+                                                if page != pagect[0]:
+                                                    page = pagect[0]
+                                                    navercafeembed = naver_search.cafeEmbed(jsonresults=navercafesc, page=page, perpage=4, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navercafeembed.set_author(name=botname, icon_url=boticon)
+                                                    navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                    await navercaferesult.edit(embed=navercafeembed)
                                             elif pagect[0] == None: break
                                             
                                 msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 영화검색 정지]')

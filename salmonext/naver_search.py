@@ -16,6 +16,9 @@ def naverSearch(id, secret, sctype, query, sort='sim'):
     if rescode == 200:
         results = json.load(response)
         for linenum in range(len(results['items'])):
+            print(discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True))
+            results['items'][linenum]['title'] = discord.utils.escape_markdown(results['items'][linenum]['title'], as_needed=True)
+            results['items'][linenum]['description'] = discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True)
             for replaces in replacepairs:
                 results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
                 if sctype != 'movie':
@@ -24,9 +27,33 @@ def naverSearch(id, secret, sctype, query, sort='sim'):
     else:
         return rescode
 
+def resultinfoPanel(results, page, perpage, naversort):
+    if results['total'] > 100:
+        max100 = ' 중 상위 100건'
+    else:
+        max100 = ''
+    
+    if results['total'] < perpage:
+        allpage = 0
+    else: 
+        if max100:
+            allpage = (100-1)//perpage
+        else:
+            allpage = (results['total']-1)//perpage
+    
+    builddateraw = results['lastBuildDate']
+    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
+    if builddate.strftime('%p') == 'AM':
+        builddayweek = '오전'
+    elif builddate.strftime('%p') == 'PM':
+        builddayweek = '오후'
+    buildhour12 = builddate.strftime('%I')
+    panel = f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```"
+    return panel
+
 def blogEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍📝 네이버 블로그 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 📝 네이버 블로그 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -43,25 +70,12 @@ def blogEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{bloggername}]({bloggerlink})* / **{postdate}**", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
 def newsEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍📰 네이버 뉴스 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 📰 네이버 뉴스 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -80,25 +94,12 @@ def newsEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({originallink})**\n{description}\n- **{pubdatetext}**", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
 def bookEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍📗 네이버 책 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 📗 네이버 책 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -118,25 +119,12 @@ def bookEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{author} 저 | {publisher} | {pubdate} | ISBN: {isbn}\n**{discount}원**~~`{price}원`~~\n\n{description}", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
 def encycEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍📚 네이버 백과사전 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 📚 네이버 백과사전 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -147,25 +135,12 @@ def encycEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
 def movieEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍🎬 네이버 영화 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 🎬 네이버 영화 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -179,25 +154,12 @@ def movieEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})** ({subtitle})\n`{userratingbar} {userrating}`\n감독: {director} | 출연: {actor} | {pubdate}", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
 def cafeEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
-    embed=discord.Embed(title=f'🔍🎬 네이버 카페글 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    embed=discord.Embed(title=f'🔍 ☕ 네이버 카페글 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
     for pgindex in range(perpage):
         if page*perpage+pgindex+1 <= results['total']:
             title = results['items'][page*perpage+pgindex]['title']
@@ -210,18 +172,5 @@ def cafeEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}\n- *[{cafename}]({cafeurl})*", inline=False)
         else:
             break
-    if results['total'] > 100: max100 = ' 중 상위 100건'
-    else: max100 = ''
-    if results['total'] < perpage: allpage = 0
-    else: 
-        if max100: allpage = (100-1)//perpage
-        else: allpage = (results['total']-1)//perpage
-    builddateraw = results['lastBuildDate']
-    builddate = datetime.datetime.strptime(builddateraw.replace(' +0900', ''), '%a, %d %b %Y %X')
-    if builddate.strftime('%p') == 'AM':
-        builddayweek = '오전'
-    elif builddate.strftime('%p') == 'PM':
-        builddayweek = '오후'
-    buildhour12 = builddate.strftime('%I')
-    embed.add_field(name="ㅤ", value=f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```", inline=False)
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
