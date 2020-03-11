@@ -188,7 +188,6 @@ async def secloop():
 
 @tasks.loop(seconds=1)
 async def dbrecon():
-    startdb = time.time()
     try:
         db.ping(reconnect=False)
     except BaseException:
@@ -196,8 +195,6 @@ async def dbrecon():
         logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
         logger.info('DB RECONNECT DONE.')
-    enddb = startdb = time.time()
-    print(enddb-startdb)
 
 @client.event
 async def on_guild_join(guild):
