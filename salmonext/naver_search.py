@@ -16,13 +16,15 @@ def naverSearch(id, secret, sctype, query, sort='sim'):
     if rescode == 200:
         results = json.load(response)
         for linenum in range(len(results['items'])):
-            print(discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True))
-            results['items'][linenum]['title'] = discord.utils.escape_markdown(results['items'][linenum]['title'], as_needed=True)
-            results['items'][linenum]['description'] = discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True)
+            title = results['items'][linenum]['title']
+            description = results['items'][linenum]['description']
+            results['items'][linenum]['title'] = discord.utils.escape_markdown(title, as_needed=True)
+            if sctype != 'movie':
+                results['items'][linenum]['description'] = discord.utils.escape_markdown(description, as_needed=True)
             for replaces in replacepairs:
-                results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
+                results['items'][linenum]['title'] = title.replace(replaces[0], replaces[1])
                 if sctype != 'movie':
-                    results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
+                    results['items'][linenum]['description'] = description.replace(replaces[0], replaces[1])
         return results
     else:
         return rescode

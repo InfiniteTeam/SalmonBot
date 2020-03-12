@@ -377,7 +377,26 @@ async def on_message(message):
                 msglog(message.author.id, message.channel.id, message.content, '[도움]')
             
             elif message.content == prefix + '정보':
-                embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
+                uptimenow = re.findall('\d+', str(datetime.datetime.now() - starttime))
+                uptimestr = ''
+                if len(uptimenow) == 4:
+                    if int(uptimenow[0]) > 0:
+                        uptimestr += f'{int(uptimenow[0])}시간 '
+                    if int(uptimenow[1]) > 0:
+                        uptimestr += f'{int(uptimenow[1])}분 '
+                    if int(uptimenow[2]) > 0:
+                        uptimestr += f'{int(uptimenow[2])}초 '
+                if len(uptimenow) == 5:
+                    if int(uptimenow[0]) > 0:
+                        uptimestr += f'{int(uptimenow[0])}일 '
+                    if int(uptimenow[1]) > 0:
+                        uptimestr += f'{int(uptimenow[1])}시간 '
+                    if int(uptimenow[2]) > 0:
+                        uptimestr += f'{int(uptimenow[2])}분 '
+                    if int(uptimenow[3]) > 0:
+                        uptimestr += f'{int(uptimenow[3])}초 '
+
+                embed=discord.Embed(title='봇 정보', description=f'봇 이름: {botname}\n봇 버전: {versionPrefix}{versionNum}\n실행 시간: {uptimestr}', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_thumbnail(url=thumbnail)
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
@@ -395,31 +414,6 @@ async def on_message(message):
                 await message.channel.send(embed=embed)
                 msglog(message.author.id, message.channel.id, message.content, '[핑]')
                 print(embed.to_dict())
-
-            elif message.content == prefix + '업타임':
-                uptimenow = re.findall('\d+', str(datetime.datetime.now() - starttime))
-                uptimestr = '봇 실행 시간: '
-                if len(uptimenow) == 4:
-                    if int(uptimenow[0]) > 0:
-                        uptimestr += f'{int(uptimenow[0])}시간 '
-                    if int(uptimenow[1]) > 0:
-                        uptimestr += f'{int(uptimenow[1])}분 '
-                    if int(uptimenow[2]) > 0:
-                        uptimestr += f'{int(uptimenow[2])}초 '
-                if len(uptimenow) == 5:
-                    if int(uptimenow[0]) > 0:
-                        uptimestr += f'{int(uptimenow[0])}일 '
-                    if int(uptimenow[1]) > 0:
-                        uptimestr += f'{int(uptimenow[1])}시간 '
-                    if int(uptimenow[2]) > 0:
-                        uptimestr += f'{int(uptimenow[2])}분 '
-                    if int(uptimenow[3]) > 0:
-                        uptimestr += f'{int(uptimenow[3])}초 '
-                embed=discord.Embed(title='⏱ 봇 실행 시간', description=uptimestr, color=color['salmon'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=botname, icon_url=boticon)
-                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                await message.channel.send(embed=embed)
-                msglog(message.author.id, message.channel.id, message.content, '[업타임]')
 
             elif message.content.startswith(prefix + '봇권한'):
                 if type(serverid_or_type) == int:
