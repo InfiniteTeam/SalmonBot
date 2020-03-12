@@ -6,5 +6,5 @@ Everything on the web, in Discord.
 
 Developer
 --
-by ArpaAP, in InfiniteTeam   
-![ArpaAP](./p.ico)
+ 
+<img src="./p.png" width="40" height="40" title="ArpaAP"> by ArpaAP, in InfiniteTeam  
