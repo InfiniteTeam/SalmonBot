@@ -16,7 +16,6 @@ import os
 import sys
 import urllib.request
 import traceback
-import inspect
 from salmonext import naver_search, pagecontrol, mastercommand
 
 # =============== Local Data Load ===============
@@ -138,7 +137,7 @@ logger.info('========== START ==========')
 logger.info('Data Load Complete.')
 
 # ================ Bot Command ===============
-client = discord.Client()
+client = discord.Client(status=discord.Status.idle, activity=discord.Game('연어봇 시작'))
 
 @client.event
 async def on_ready():
