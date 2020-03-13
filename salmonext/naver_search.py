@@ -2,12 +2,13 @@ import discord
 import urllib.request
 import json
 import datetime
+import html
 
-replacepairs = (['&quot;', '"'], ['&lsquo;', "'"], ['&rsquo;', "'"], ['<b>', '`'], ['</b>', '`'])
+replacepairs = [['<b>', '`'], ['</b>', '`']]
 
-def naverSearch(id, secret, sctype, query, sort='sim'):
+def naverSearch(id, secret, sctype, query, sort='sim', display=100):
     encText = urllib.parse.quote(query)
-    url = f"https://openapi.naver.com/v1/search/{sctype}?query={encText}&display=100&sort={sort}"
+    url = f"https://openapi.naver.com/v1/search/{sctype}?query={encText}&display={display}&sort={sort}"
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", id)
     request.add_header("X-Naver-Client-Secret", secret)
@@ -16,30 +17,37 @@ def naverSearch(id, secret, sctype, query, sort='sim'):
     if rescode == 200:
         results = json.load(response)
         for linenum in range(len(results['items'])):
-            title = results['items'][linenum]['title']
-            description = results['items'][linenum]['description']
-            results['items'][linenum]['title'] = discord.utils.escape_markdown(title, as_needed=True)
+            # 1. Discord Markdown Escape
+            results['items'][linenum]['title'] = discord.utils.escape_markdown(results['items'][linenum]['title'], as_needed=True)
             if sctype != 'movie':
-                results['items'][linenum]['description'] = discord.utils.escape_markdown(description, as_needed=True)
+                results['items'][linenum]['description'] = discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True)
+
+            # 2. HTML Unescape
+            results['items'][linenum]['title'] = html.unescape(results['items'][linenum]['title'])
+            if sctype != 'movie':
+                results['items'][linenum]['description'] = html.unescape(results['items'][linenum]['description'])
+
+            # 3. Other Escape
             for replaces in replacepairs:
-                results['items'][linenum]['title'] = title.replace(replaces[0], replaces[1])
+                results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
                 if sctype != 'movie':
-                    results['items'][linenum]['description'] = description.replace(replaces[0], replaces[1])
+                    results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
+
         return results
     else:
         return rescode
 
-def resultinfoPanel(results, page, perpage, naversort):
-    if results['total'] > 100:
-        max100 = ' 중 상위 100건'
+def resultinfoPanel(results, page, perpage, naversort, display=100):
+    if results['total'] > display:
+        maxdis = f' 중 상위 {display}건'
     else:
-        max100 = ''
+        maxdis = ''
     
     if results['total'] < perpage:
         allpage = 0
     else: 
-        if max100:
-            allpage = (100-1)//perpage
+        if maxdis:
+            allpage = (display-1)//perpage
         else:
             allpage = (results['total']-1)//perpage
     
@@ -50,14 +58,18 @@ def resultinfoPanel(results, page, perpage, naversort):
     elif builddate.strftime('%p') == 'PM':
         builddayweek = '오후'
     buildhour12 = builddate.strftime('%I')
-    panel = f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{max100}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```"
+    panel = f"```{page+1}/{allpage+1} 페이지, 총 {results['total']}건{maxdis}, {naversort}\n{builddate.year}년 {builddate.month}월 {builddate.day}일 {builddayweek} {buildhour12}시 {builddate.minute}분 기준```"
     return panel
 
 def blogEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 📝 네이버 블로그 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             description = results['items'][page*perpage+pgindex]['description']
@@ -78,8 +90,12 @@ def blogEmbed(jsonresults, page, perpage, color, query, naversort):
 def newsEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 📰 네이버 뉴스 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             originallink = results['items'][page*perpage+pgindex]['link']
             description = results['items'][page*perpage+pgindex]['description']
@@ -102,8 +118,12 @@ def newsEmbed(jsonresults, page, perpage, color, query, naversort):
 def bookEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 📗 네이버 책 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             author = results['items'][page*perpage+pgindex]['author']
@@ -127,8 +147,12 @@ def bookEmbed(jsonresults, page, perpage, color, query, naversort):
 def encycEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 📚 네이버 백과사전 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             description = results['items'][page*perpage+pgindex]['description']
@@ -143,8 +167,12 @@ def encycEmbed(jsonresults, page, perpage, color, query, naversort):
 def movieEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 🎬 네이버 영화 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             subtitle = results['items'][page*perpage+pgindex]['subtitle']
@@ -162,8 +190,12 @@ def movieEmbed(jsonresults, page, perpage, color, query, naversort):
 def cafeEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 ☕ 네이버 카페글 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
     for pgindex in range(perpage):
-        if page*perpage+pgindex+1 <= results['total']:
+        if page*perpage+pgindex+1 <= maxpage:
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             description = results['items'][page*perpage+pgindex]['description']
@@ -175,4 +207,45 @@ def cafeEmbed(jsonresults, page, perpage, color, query, naversort):
         else:
             break
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
+    return embed
+
+def kinEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍 🎓 네이버 지식iN 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= maxpage:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            description = results['items'][page*perpage+pgindex]['description']
+            if description == '':
+                description = '(설명 없음)'
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
+        else:
+            break
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
+    return embed
+
+def webkrEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍 🧾 네이버 웹문서 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    
+    if results['total'] < 30:
+        maxpage = results['total']
+    else:
+        maxpage = 30
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= maxpage:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            description = results['items'][page*perpage+pgindex]['description']
+            if description == '':
+                description = '(설명 없음)'
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
+        else:
+            break
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=30), inline=False)
     return embed
