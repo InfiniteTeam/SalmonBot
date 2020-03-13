@@ -2,7 +2,7 @@
     "botName": "연어봇",
     "prefix": "%",
     "activity": "연어봇 - %도움",
-    "status": "dnd",
+    "status": "online",
     "inspection": false,
     "tokenFileName": "token.txt",
     "betatokenFileName": "beta.txt",
