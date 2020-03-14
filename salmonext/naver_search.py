@@ -5,11 +5,11 @@ import datetime
 import html
 
 replacepairs = [['<b>', '`'], ['</b>', '`']]
-nodesc = ['movie', 'image']
+noDescription = ['movie', 'image', 'shop']
 
 def naverSearch(id, secret, sctype, query, sort='sim', display=100):
     encText = urllib.parse.quote(query)
-    url = f"https://openapi.naver.com/v1/search/{sctype}?query={encText}&display={display}&sort={sort}"
+    url = f"https://openapi.naver.com/v1/search/{sctype}.json?query={encText}&display={display}&sort={sort}"
     request = urllib.request.Request(url)
     request.add_header("X-Naver-Client-Id", id)
     request.add_header("X-Naver-Client-Secret", secret)
@@ -20,18 +20,18 @@ def naverSearch(id, secret, sctype, query, sort='sim', display=100):
         for linenum in range(len(results['items'])):
             # 1. Discord Markdown Escape
             results['items'][linenum]['title'] = discord.utils.escape_markdown(results['items'][linenum]['title'], as_needed=True)
-            if not sctype in nodesc:
+            if not sctype in noDescription:
                 results['items'][linenum]['description'] = discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True)
 
             # 2. HTML Unescape
             results['items'][linenum]['title'] = html.unescape(results['items'][linenum]['title'])
-            if not sctype in nodesc:
+            if not sctype in noDescription:
                 results['items'][linenum]['description'] = html.unescape(results['items'][linenum]['description'])
 
             # 3. Other Escape
             for replaces in replacepairs:
                 results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
-                if not sctype in nodesc:
+                if not sctype in noDescription:
                     results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
 
         return results
@@ -142,6 +142,7 @@ def bookEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{author} 저 | {publisher} | {pubdate} | ISBN: {isbn}\n**{discount}원**~~`{price}원`~~\n\n{description}", inline=False)
         else:
             break
+    embed.set_thumbnail(url=results['items'][page*perpage+pgindex]['image'])
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
@@ -162,6 +163,7 @@ def encycEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
         else:
             break
+    embed.set_image(url=results['items'][page*perpage+pgindex]['thumbnail'])
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
@@ -185,6 +187,7 @@ def movieEmbed(jsonresults, page, perpage, color, query, naversort):
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})** ({subtitle})\n`{userratingbar} {userrating}`\n감독: {director} | 출연: {actor} | {pubdate}", inline=False)
         else:
             break
+    embed.set_image(url=results['items'][page*perpage+pgindex]['image'])
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort), inline=False)
     return embed
 
@@ -262,7 +265,50 @@ def imageEmbed(jsonresults, page, perpage, color, query, naversort):
             title = results['items'][page*perpage+pgindex]['title']
             link = results['items'][page*perpage+pgindex]['link']
             embed.add_field(name="ㅤ", value=f"**[{title}]({link})**", inline=False)
-            embed.set_image(url=results['items'][page*perpage+pgindex]['thumbnail'])
+        else:
+            break
+    embed.set_image(url=results['items'][page*perpage+pgindex]['thumbnail'])
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=100), inline=False)
+    return embed
+
+def shopEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍 🛍 네이버 쇼핑 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= maxpage:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            if results['items'][page*perpage+pgindex]['lprice'] == '0':
+                lprice = ''
+            else:
+                lprice = f"**최저가: {results['items'][page*perpage+pgindex]['lprice']}원**"
+            mallname = results['items'][page*perpage+pgindex]['mallName']
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{mallname}\n{lprice}", inline=False)
+        else:
+            break
+    embed.set_image(url=results['items'][page*perpage+pgindex]['image'])
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=100), inline=False)
+    return embed
+
+def docEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍 📊 네이버 전문자료 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= maxpage:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            description = results['items'][page*perpage+pgindex]['description']
+            if description == '':
+                description = '(설명 없음)'
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**\n{description}", inline=False)
         else:
             break
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=100), inline=False)

@@ -249,12 +249,14 @@ async def on_guild_remove(guild):
 
 @client.event
 async def on_error(event, *args, **kwargs):
+    ignoreexc = [discord.http.NotFound]
     print(event, args, kwargs)
     print(args[0].content)
     excinfo = sys.exc_info()
     errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
     errlogger.error(errstr + '\n=========================')
-    await args[0].channel.send(embed=errormsg(errstr, args[0]))
+    if not excinfo[0] in ignoreexc:
+        await args[0].channel.send(embed=errormsg(errstr, args[0]))
 
 @client.event
 async def on_message(message):
@@ -370,9 +372,11 @@ async def on_message(message):
                     `{prefix}봇권한 채널목록`: 서버 채널에서 {botname}이 접근(읽기/쓰기/듣기/말하기)할 수 있는 채널 목록을 확인합니다.
                     """
                 helpstr_naverapi = f"""\
-                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전/웹문서/이미지) (검색어) [&&최신순/&&정확도순]`: 네이버 검색 API를 사용해 블로그, 뉴스 등을 최대 100건 까지 검색합니다.
-                    `{prefix}네이버검색 (영화) (검색어)`: 네이버 검색 API를 사용해 영화 등을 최대 100건까지 검색합니다.
-                     -사용예: `네이버검색 백과사전 파이썬 &&최신순`
+                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전/이미지) (검색어) [&&정확도순/&&최신순]`,
+                    `{prefix}네이버검색 쇼핑 (검색어) [&&정확도순/&&최신순/&&가격높은순/&&가격낮은순]`,
+                    `{prefix}네이버검색 (영화/웹문서/전문자료) (검색어)`:
+                    ㅤ네이버 검색 API를 사용해 검색합니다.
+                    ㅤ사용예: `네이버검색 백과사전 파이썬 &&최신순`
                     """
                 embed=discord.Embed(title='전체 명령어', description='**`(소괄호)`는 반드시 입력해야 하는 부분, `[대괄호]`는 입력하지 않아도 되는 부분입니다.**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
@@ -553,17 +557,30 @@ async def on_message(message):
                     def navercheck(reaction, user):
                         return user == message.author and naverresult.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                     searchstr = message.content
-                    if searchstr[-6:] == ' &&최신순':
-                        naversort = '최신순'
-                        naversortcode = 'date'
-                        searchstr = searchstr[:-6]
-                    elif searchstr[-7:] == ' &&정확도순':
-                        naversort = '정확도순'
-                        naversortcode = 'sim'
-                        searchstr = searchstr[:-7]
+                    if message.content.startswith(prefix + '네이버검색 쇼핑'):
+                        if searchstr[-8:] == ' &&가격높은순':
+                            naversort = '가격 높은순'
+                            naversortcode = 'dsc'
+                            searchstr = searchstr[:-8]
+                        elif searchstr[-8:] == ' &&가격낮은순':
+                            naversort = '가격 낮은순'
+                            naversortcode = 'asc'
+                            searchstr = searchstr[:-8]
+                        elif searchstr[-6:] == ' &&최신순':
+                            naversort = '최신순'
+                            naversortcode = 'date'
+                            searchstr = searchstr[:-6]
+                        else:
+                            naversort = '정확도순'
+                            naversortcode = 'sim'
                     else:
-                        naversort = '정확도순'
-                        naversortcode = 'sim'
+                        if searchstr[-6:] == ' &&최신순':
+                            naversort = '최신순'
+                            naversortcode = 'date'
+                            searchstr = searchstr[:-6]
+                        else:
+                            naversort = '정확도순'
+                            naversortcode = 'sim'
                     if searchstr.startswith(prefix + '네이버검색 블로그'):
                         cmdlen = 9
                         perpage = 4
@@ -674,7 +691,7 @@ async def on_message(message):
 
                     elif searchstr.startswith(prefix + '네이버검색 책'):
                         cmdlen = 7
-                        perpage = 4
+                        perpage = 1
                         if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                             page = 0
                             query = searchstr[len(prefix)+1+cmdlen:]
@@ -713,7 +730,7 @@ async def on_message(message):
                                             await naverbookresult.clear_reactions()
                                             break
                                         else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=4, nowpage=page)
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=10, nowpage=page)
                                             await pagect[1]
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
@@ -728,7 +745,7 @@ async def on_message(message):
 
                     elif searchstr.startswith(prefix + '네이버검색 백과사전'):
                         cmdlen = 10
-                        perpage = 4
+                        perpage = 1
                         if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                             page = 0
                             query = searchstr[len(prefix)+1+cmdlen:]
@@ -767,7 +784,7 @@ async def on_message(message):
                                             await naverencycresult.clear_reactions()
                                             break
                                         else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=4, nowpage=page)
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=10, nowpage=page)
                                             await pagect[1]
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
@@ -782,7 +799,7 @@ async def on_message(message):
 
                     elif searchstr.startswith(prefix + '네이버검색 영화'):
                         cmdlen = 8
-                        perpage = 4
+                        perpage = 1
                         if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                             page = 0
                             query = searchstr[len(prefix)+1+cmdlen:]
@@ -821,7 +838,7 @@ async def on_message(message):
                                             await navermovieresult.clear_reactions()
                                             break
                                         else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=4, nowpage=page)
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=10, nowpage=page)
                                             await pagect[1]
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
@@ -1049,6 +1066,114 @@ async def on_message(message):
                                             elif pagect[0] == None: break
                                             
                                 msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 이미지검색 정지]')
+
+                    elif searchstr.startswith(prefix + '네이버검색 쇼핑'):
+                        cmdlen = 8
+                        perpage = 1
+                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                            page = 0
+                            query = searchstr[len(prefix)+1+cmdlen:]
+                            try:
+                                navershopsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='shop', query=query, display=100, sort=naversortcode)
+                            except Exception as ex:
+                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
+                            else:
+                                if navershopsc == 429:
+                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]')
+                                elif type(navershopsc) == int:
+                                    await message.channel.send(f'오류! 코드: {navershopsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]')
+                                elif navershopsc['total'] == 0:
+                                    await message.channel.send('검색 결과가 없습니다!')
+                                else:
+                                    if navershopsc['total'] < perpage: navershopallpage = 0
+                                    else: 
+                                        if navershopsc['total'] > 100: navershopallpage = (100-1)//perpage
+                                        else: navershopallpage = (navershopsc['total']-1)//perpage
+                                    navershopembed = naver_search.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    navershopembed.set_author(name=botname, icon_url=boticon)
+                                    navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                    navershopresult = await message.channel.send(embed=navershopembed)
+                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                        await navershopresult.add_reaction(emoji)
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 쇼핑검색]')
+                                    while True:
+                                        msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]')
+                                        naverresult = navershopresult
+                                        try:
+                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                        except asyncio.TimeoutError:
+                                            await navershopresult.clear_reactions()
+                                            break
+                                        else:
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navershopresult, allpage=navershopallpage, perpage=10, nowpage=page)
+                                            await pagect[1]
+                                            if type(pagect[0]) == int:
+                                                if page != pagect[0]:
+                                                    page = pagect[0]
+                                                    navershopembed = naver_search.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navershopembed.set_author(name=botname, icon_url=boticon)
+                                                    navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                    await navershopresult.edit(embed=navershopembed)
+                                            elif pagect[0] == None: break
+                                            
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 쇼핑검색 정지]')
+
+                    elif searchstr.startswith(prefix + '네이버검색 전문자료'):
+                        cmdlen = 10
+                        perpage = 4
+                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                            page = 0
+                            query = searchstr[len(prefix)+1+cmdlen:]
+                            try:
+                                naverdocsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='doc', query=query, sort=naversortcode)
+                            except Exception as ex:
+                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
+                            else:
+                                if naverdocsc == 429:
+                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]')
+                                elif type(naverdocsc) == int:
+                                    await message.channel.send(f'오류! 코드: {naverdocsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]')
+                                elif naverdocsc['total'] == 0:
+                                    await message.channel.send('검색 결과가 없습니다!')
+                                else:
+                                    if naverdocsc['total'] < perpage: naverdocallpage = 0
+                                    else: 
+                                        if naverdocsc['total'] > 100: naverdocallpage = (100-1)//perpage
+                                        else: naverdocallpage = (naverdocsc['total']-1)//perpage
+                                    naverdocembed = naver_search.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverdocembed.set_author(name=botname, icon_url=boticon)
+                                    naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                    naverdocresult = await message.channel.send(embed=naverdocembed)
+                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                        await naverdocresult.add_reaction(emoji)
+                                    msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 전문자료검색]')
+                                    while True:
+                                        msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]')
+                                        naverresult = naverdocresult
+                                        try:
+                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                        except asyncio.TimeoutError:
+                                            await naverdocresult.clear_reactions()
+                                            break
+                                        else:
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverdocresult, allpage=naverdocallpage, perpage=4, nowpage=page)
+                                            await pagect[1]
+                                            if type(pagect[0]) == int:
+                                                if page != pagect[0]:
+                                                    page = pagect[0]
+                                                    naverdocembed = naver_search.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverdocembed.set_author(name=botname, icon_url=boticon)
+                                                    naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                    await naverdocresult.edit(embed=naverdocembed)
+                                            elif pagect[0] == None: break
+                                            
+                                msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 전문자료검색 정지]')
 
                     else: await message.channel.send(embed=notexists())
                 
