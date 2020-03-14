@@ -1190,7 +1190,7 @@ async def on_message(message):
                         await message.channel.send('관리자 외 사용제한 꺼짐.')
                     elif message.content.startswith(prefix + '//exec'):
                         try:
-                            exout = eval(message.content[len(prefix)+7:])
+                            exout = exec(message.content[len(prefix)+7:])
                         except Exception as ex:
                             execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
                         else:
