@@ -1213,7 +1213,7 @@ async def on_message(message):
                         await message.channel.send(embed=embed)
                         msglog(message.author.id, message.channel.id, message.content, '[EVAL]')
                     elif message.content.startswith(prefix + '//await'):
-                        await eval(message.content[len(prefix)+8:])
+                        await exec(message.content[len(prefix)+8:])
                     elif message.content == prefix + '//restart --db':
                         sshcmd('sudo systemctl restart mysql')
                         await message.channel.send('DONE')
