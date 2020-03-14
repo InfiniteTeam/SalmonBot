@@ -137,7 +137,7 @@ logger.info('========== START ==========')
 logger.info('Data Load Complete.')
 
 # ================ Bot Command ===============
-client = discord.Client(status=discord.Status.idle, activity=discord.Game('연어봇 시작'))
+client = discord.Client(status=discord.Status.dnd, activity=discord.Game('연어봇 시작'))
 
 @client.event
 async def on_ready():
@@ -146,16 +146,13 @@ async def on_ready():
         logger.warning(f'BETA MODE ENABLED.')
     secloop.start()
     dbrecon.start()
+    activityLoop.start()
     #await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
 
 @tasks.loop(seconds=5)
 async def secloop():
-    global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem, acnum
+    global ping, pinglevel, seclist, dbping, temp, cpus, cpulist, mem
     try:
-        aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께']
-        await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
-        if acnum >= len(aclist)-1: acnum = 0
-        else: acnum += 1
         ping = round(1000 * client.latency)
         if ping <= 100: pinglevel = '🔵 매우좋음'
         elif ping > 100 and ping <= 250: pinglevel = '🟢 양호함'
@@ -194,6 +191,17 @@ async def dbrecon():
         logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
         logger.info('DB RECONNECT DONE.')
+
+@tasks.loop(seconds=4)
+async def activityLoop():
+    global acnum
+    try:
+        aclist = [f'연어봇 - {prefix}도움 입력!', f'{len(client.users)}명의 사용자와 함께', f'{len(client.guilds)}개의 서버와 함께']
+        await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
+        if acnum >= len(aclist)-1: acnum = 0
+        else: acnum += 1
+    except BaseException:
+        traceback.print_exc()
 
 @client.event
 async def on_guild_join(guild):
@@ -479,12 +487,11 @@ async def on_message(message):
                 else:
                     await message.channel.send(embed=onlyguild())
 
-            elif message.content == prefix + '서버상태 데이터서버':
+            elif message.content == prefix + '데이터서버':
                 dbalive = None
                 try: db.ping(reconnect=False)
                 except: dbalive = 'Closed'
                 else: dbalive = 'Alive'
-
                 
                 memlist = re.findall('\d+', mem)
                 memtotal, memused, memfree, membc, swaptotal, swapused, swapfree = memlist[0], memlist[1], memlist[2], memlist[4], memlist[6], memlist[7], memlist[8]
@@ -991,54 +998,54 @@ async def on_message(message):
 
                     elif searchstr.startswith(prefix + '네이버검색 이미지'):
                         cmdlen = 9
-                        perpage = 4
+                        perpage = 1
                         if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
                             page = 0
                             query = searchstr[len(prefix)+1+cmdlen:]
                             try:
-                                naverwebkrsc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='webkr', query=query, display=30, sort=naversortcode)
+                                naverimagesc = naver_search.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='image', query=query, display=100, sort=naversortcode)
                             except Exception as ex:
                                 await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                                 await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                             else:
-                                if naverwebkrsc == 429:
+                                if naverimagesc == 429:
                                     await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                                     msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 횟수초과]')
-                                elif type(naverwebkrsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverwebkrsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                elif type(naverimagesc) == int:
+                                    await message.channel.send(f'오류! 코드: {naverimagesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                                     msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 오류]')
-                                elif naverwebkrsc['total'] == 0:
+                                elif naverimagesc['total'] == 0:
                                     await message.channel.send('검색 결과가 없습니다!')
                                 else:
-                                    if naverwebkrsc['total'] < perpage: naverwebkrallpage = 0
+                                    if naverimagesc['total'] < perpage: naverimageallpage = 0
                                     else: 
-                                        if naverwebkrsc['total'] > 30: naverwebkrallpage = (30-1)//perpage
-                                        else: naverwebkrallpage = (naverwebkrsc['total']-1)//perpage
-                                    naverwebkrembed = naver_search.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
-                                    naverwebkrembed.set_author(name=botname, icon_url=boticon)
-                                    naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverwebkrresult = await message.channel.send(embed=naverwebkrembed)
+                                        if naverimagesc['total'] > 100: naverimageallpage = (100-1)//perpage
+                                        else: naverimageallpage = (naverimagesc['total']-1)//perpage
+                                    naverimageembed = naver_search.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverimageembed.set_author(name=botname, icon_url=boticon)
+                                    naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                    naverimageresult = await message.channel.send(embed=naverimageembed)
                                     for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverwebkrresult.add_reaction(emoji)
+                                        await naverimageresult.add_reaction(emoji)
                                     msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 이미지검색]')
                                     while True:
                                         msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverwebkrresult
+                                        naverresult = naverimageresult
                                         try:
                                             reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
                                         except asyncio.TimeoutError:
-                                            await naverwebkrresult.clear_reactions()
+                                            await naverimageresult.clear_reactions()
                                             break
                                         else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverwebkrresult, allpage=naverwebkrallpage, perpage=perpage, nowpage=page)
+                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverimageresult, allpage=naverimageallpage, perpage=10, nowpage=page)
                                             await pagect[1]
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverwebkrembed = naver_search.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
-                                                    naverwebkrembed.set_author(name=botname, icon_url=boticon)
-                                                    naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverwebkrresult.edit(embed=naverwebkrembed)
+                                                    naverimageembed = naver_search.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverimageembed.set_author(name=botname, icon_url=boticon)
+                                                    naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                    await naverimageresult.edit(embed=naverimageembed)
                                             elif pagect[0] == None: break
                                             
                                 msglog(message.author.id, message.channel.id, message.content, '[네이버검색: 이미지검색 정지]')

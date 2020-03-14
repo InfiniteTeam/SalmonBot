@@ -5,6 +5,7 @@ import datetime
 import html
 
 replacepairs = [['<b>', '`'], ['</b>', '`']]
+nodesc = ['movie', 'image']
 
 def naverSearch(id, secret, sctype, query, sort='sim', display=100):
     encText = urllib.parse.quote(query)
@@ -19,18 +20,18 @@ def naverSearch(id, secret, sctype, query, sort='sim', display=100):
         for linenum in range(len(results['items'])):
             # 1. Discord Markdown Escape
             results['items'][linenum]['title'] = discord.utils.escape_markdown(results['items'][linenum]['title'], as_needed=True)
-            if sctype != 'movie':
+            if not sctype in nodesc:
                 results['items'][linenum]['description'] = discord.utils.escape_markdown(results['items'][linenum]['description'], as_needed=True)
 
             # 2. HTML Unescape
             results['items'][linenum]['title'] = html.unescape(results['items'][linenum]['title'])
-            if sctype != 'movie':
+            if not sctype in nodesc:
                 results['items'][linenum]['description'] = html.unescape(results['items'][linenum]['description'])
 
             # 3. Other Escape
             for replaces in replacepairs:
                 results['items'][linenum]['title'] = results['items'][linenum]['title'].replace(replaces[0], replaces[1])
-                if sctype != 'movie':
+                if not sctype in nodesc:
                     results['items'][linenum]['description'] = results['items'][linenum]['description'].replace(replaces[0], replaces[1])
 
         return results
@@ -232,7 +233,6 @@ def kinEmbed(jsonresults, page, perpage, color, query, naversort):
 def webkrEmbed(jsonresults, page, perpage, color, query, naversort):
     results = jsonresults
     embed=discord.Embed(title=f'🔍 🧾 네이버 웹문서 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
-    
     if results['total'] < 30:
         maxpage = results['total']
     else:
@@ -248,4 +248,22 @@ def webkrEmbed(jsonresults, page, perpage, color, query, naversort):
         else:
             break
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=30), inline=False)
+    return embed
+
+def imageEmbed(jsonresults, page, perpage, color, query, naversort):
+    results = jsonresults
+    embed=discord.Embed(title=f'🔍 🖼 네이버 이미지 검색 결과 - `{query}`', color=color, timestamp=datetime.datetime.utcnow())
+    if results['total'] < 100:
+        maxpage = results['total']
+    else:
+        maxpage = 100
+    for pgindex in range(perpage):
+        if page*perpage+pgindex+1 <= maxpage:
+            title = results['items'][page*perpage+pgindex]['title']
+            link = results['items'][page*perpage+pgindex]['link']
+            embed.add_field(name="ㅤ", value=f"**[{title}]({link})**", inline=False)
+            embed.set_image(url=results['items'][page*perpage+pgindex]['thumbnail'])
+        else:
+            break
+    embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=100), inline=False)
     return embed
