@@ -313,3 +313,66 @@ def docEmbed(jsonresults, page, perpage, color, query, naversort):
             break
     embed.add_field(name="ㅤ", value=resultinfoPanel(results, page, perpage, naversort, display=100), inline=False)
     return embed
+
+def shortUrl(clientid, clientsecret, url):
+    encText = urllib.parse.quote(url)
+    data = "url=" + encText
+    url = "https://openapi.naver.com/v1/util/shorturl"
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", clientid)
+    request.add_header("X-Naver-Client-Secret", clientsecret)
+    response = urllib.request.urlopen(request, data=data.encode("utf-8"))
+    rescode = response.getcode()
+    if rescode == 200:
+        response_body = response.read()
+        result = response_body.decode('utf-8')
+        return json.loads(result)
+    else:
+        return "Error Code:" + rescode
+
+def shorturlEmbed(jsonresult, color):
+    orgurl = jsonresult['result']['orgUrl']
+    url = jsonresult['result']['url']
+    embed = discord.Embed(title='📇 네이버 URL 단축 결과', description=f'**원본 URL**:\n{orgurl}\n\n**단축 URL**:\n{url}\n\n**QR코드**:', color=color)
+    embed.set_image(url=url + '.qr')
+    return embed
+
+def detectLangs(clientid, clientsecret, query):
+    encQuery = urllib.parse.quote(query)
+    data = "query=" + encQuery
+    url = "https://openapi.naver.com/v1/papago/detectLangs"
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", clientid)
+    request.add_header("X-Naver-Client-Secret", clientsecret)
+    response = urllib.request.urlopen(request, data=data.encode("utf-8"))
+    rescode = response.getcode()
+    if rescode == 200:
+        response_body = response.read()
+        result = response_body.decode('utf-8')
+        return json.loads(result)
+    else:
+        return "Error Code:" + rescode
+
+def detectlangsEmbed(jsonresult, orgtext, color):
+    lang = jsonresult['langCode']
+    if lang == 'ko': langstr = ':flag_kr: 한국어'
+    elif lang == 'ja': langstr = ':flag_jp: 일본어'
+    elif lang == 'zh-cn': langstr = ':flag_cn: 중국어 간체'
+    elif lang == 'zh-tw': langstr = ':flag_cn: 중국어 번체'
+    elif lang == 'hi': langstr = ':flag_in: 힌디어'
+    elif lang == 'en': langstr = '영어'
+    elif lang == 'es': langstr = ':flag_es: 스페인어'
+    elif lang == 'fr': langstr = ':flag_fr: 프랑스어'
+    elif lang == 'de': langstr = ':flag_de: 독일어'
+    elif lang == 'pt': langstr = ':flag_pt: 포르투갈어'
+    elif lang == 'vi': langstr = ':flag_vn: 베트남어'
+    elif lang == 'id': langstr = ':flag_vn: 인도네시아어'
+    elif lang == 'fa': langstr = '페르시아어'
+    elif lang == 'ar': langstr = '아랍어'
+    elif lang == 'mm': langstr = ':flag_mm: 미얀마어'
+    elif lang == 'th': langstr = ':flag_th: 태국어'
+    elif lang == 'ru': langstr = ':flag_ru: 러시아어'
+    elif lang == 'it': langstr = ':flag_it: 이탈리아어'
+    elif lang == 'unk': langstr = '알 수 없음'
+    embed = discord.Embed(title='💬 네이버 파파고 언어 감지', description=f'입력한 텍스트:\n```{orgtext}```\n감지된 언어:\n` `**{langstr}**', color=color)
+    return embed
