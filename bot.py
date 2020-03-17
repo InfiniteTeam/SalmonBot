@@ -16,7 +16,7 @@ import os
 import sys
 import urllib.request
 import traceback
-from salmonext import naverapi, pagecontrol, salmoncmds
+from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -1195,7 +1195,7 @@ async def on_message(message):
                 else:
                     await message.channel.send(embed=onlyguild())
 
-            elif message.content.startswith(prefix + '웹주소단축'):
+            elif message.content.startswith(prefix + '웹주소단축 '):
                 cmdlen = 5
                 url = message.content[len(prefix)+1+cmdlen:]
                 try:
@@ -1217,7 +1217,7 @@ async def on_message(message):
                         shorturlmsg = await message.channel.send(embed=shorturlembed)
                         msglog(message, f"[네이버주소단축: {shorturlresult['result']['orgUrl']}]")
 
-            elif message.content.startswith(prefix + '무슨언어'):
+            elif message.content.startswith(prefix + '무슨언어 '):
                 cmdlen = 4
                 query = message.content[len(prefix)+1+cmdlen:]
                 try:
@@ -1240,46 +1240,25 @@ async def on_message(message):
                         msglog(message, f"[네이버언어감지: {detectlangsresult['langCode']}]")
 
             elif message.content.startswith(prefix + '이미지태그'):
-                '''
-                url = message.attachments[0]['url']
-                    request_url = "https://kapi.kakao.com/v1/vision/multitag/generate"
-                    headers= {"Authorization": "카카오 토큰"}
-                    params = {"image_url": url}
-                    response = requests.post(request_url, headers=headers, data=params)
-                    result = response.json()
-                    resulttext = ""
-                    result = result['result']['label_kr']
-                    for i in result:
-                        resulttext += ("#"+i+" ")
-                    if resulttext == "":
-                        embed = embed_text(title="**TUNA BOT - 태그**", description=":hash: **생성된 태그가 없습니다.**")
-                        embed.set_thumbnail(url=url)
+                msgurls = salmoncmds.urlExtract(message.content)
+                if len(message.attachments):
+                    fileurl = message.attachments[0].url
+                    multitags = kakaoapi.multitag(kakaoapi_secret, image_url=fileurl)
+                elif len(msgurls):
+                    multitags = kakaoapi.multitag(kakaoapi_secret, image_url=msgurls[0])
+                else:
+                    multitags = False
+                    await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                if multitags != False:
+                    print(multitags)
+                    if multitags:
+                        tagsstr = '`, `'.join(multitags)
+                        embed = discord.Embed(title='🔲 이미지 태그 생성', description=f'생성된 태그:\n`{tagsstr}`')
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
                     else:
-                        resulttext = resulttext[:(len(resulttext)-1)]
-                        embed = discord.Embed(title="**TUNA BOT - 태그**", description=f":hash: **생성된 태그 -**\n```{resulttext}```")
-                        embed.set_thumbnail(url=url)
-                        await message.channel.send(embed=embed)
-                '''
-                url = message.attachments[0]['url']
-                request_url = "https://kapi.kakao.com/v1/vision/multitag/generate"
-                headers= {"Authorization": "카카오 토큰"}
-                params = {"image_url": url}
-                response = requests.post(request_url, headers=headers, data=params)
-                result = response.json()
-                resulttext = ""
-                result = result['result']['label_kr']
-                for i in result:
-                    resulttext += ("#"+i+" ")
-                if resulttext == "":
-                    embed = embed_text(title="**TUNA BOT - 태그**", description=":hash: **생성된 태그가 없습니다.**")
-                    embed.set_thumbnail(url=url)
-                    await message.channel.send(embed=embed)
-                else:
-                    resulttext = resulttext[:(len(resulttext)-1)]
-                    embed = discord.Embed(title="**TUNA BOT - 태그**", description=f":hash: **생성된 태그 -**\n```{resulttext}```")
-                    embed.set_thumbnail(url=url)
-                    await message.channel.send(embed=embed)
+                        await message.channel.send('생성된 태그가 없습니다!')
 
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:

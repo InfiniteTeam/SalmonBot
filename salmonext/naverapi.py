@@ -366,7 +366,7 @@ def detectlangsEmbed(jsonresult, orgtext, color):
     elif lang == 'de': langstr = ':flag_de: 독일어'
     elif lang == 'pt': langstr = ':flag_pt: 포르투갈어'
     elif lang == 'vi': langstr = ':flag_vn: 베트남어'
-    elif lang == 'id': langstr = ':flag_vn: 인도네시아어'
+    elif lang == 'id': langstr = ':flag_id: 인도네시아어'
     elif lang == 'fa': langstr = '페르시아어'
     elif lang == 'ar': langstr = '아랍어'
     elif lang == 'mm': langstr = ':flag_mm: 미얀마어'
@@ -374,5 +374,5 @@ def detectlangsEmbed(jsonresult, orgtext, color):
     elif lang == 'ru': langstr = ':flag_ru: 러시아어'
     elif lang == 'it': langstr = ':flag_it: 이탈리아어'
     elif lang == 'unk': langstr = '알 수 없음'
-    embed = discord.Embed(title='💬 네이버 파파고 언어 감지', description=f'입력한 텍스트:\n```{orgtext}```\n감지된 언어:\n` `**{langstr}**', color=color)
+    embed = discord.Embed(title='💬 네이버 파파고 언어 감지', description=f'입력한 텍스트:\n```{orgtext}```\n감지된 언어:\n` `\n**{langstr}**', color=color)
     return embed

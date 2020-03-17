@@ -1,4 +1,5 @@
 import discord
+import urlextract
 
 def accessibleChannelsMention(guild, clientid):
     alltext = []
@@ -19,3 +20,8 @@ def accessibleChannelsMention(guild, clientid):
         if not (False in [voicechperms.connect, voicechperms.speak]):
             okvoicechs.append(voicech.name)
     return oktextchs, okvoicechs
+
+def urlExtract(text):
+    extr = urlextract.URLExtract()
+    urls = extr.find_urls(text=text)
+    return urls
