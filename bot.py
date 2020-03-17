@@ -1197,25 +1197,32 @@ async def on_message(message):
 
             elif message.content.startswith(prefix + '웹주소단축 '):
                 cmdlen = 5
-                url = message.content[len(prefix)+1+cmdlen:]
-                try:
-                    shorturlresult = naverapi.shortUrl(clientid=naverapi_id, clientsecret=naverapi_secret, url=url)
-                except Exception as ex:
-                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                    await message.channel.send(f'입력한 주소에 문제가 없는지 확인해보세요.')
-                else:
-                    if shorturlresult == 429:
-                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                        msglog(message, '[네이버주소단축: 횟수초과]')
-                    elif type(shorturlresult) == int:
-                        await message.channel.send(f'오류! 코드: {shorturlresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                        msglog(message, '[네이버주소단축: 오류]')
+                urls = salmoncmds.urlExtract(message.content)
+                if urls:
+                    url = urls[0]
+                    try:
+                        shorturlresult = naverapi.shortUrl(clientid=naverapi_id, clientsecret=naverapi_secret, url=url)
+                    except Exception as ex:
+                        if str(ex) == 'HTTP Error 403: Forbidden':
+                            await message.channel.send('올바르지 않은 주소입니다.')
+                        else:
+                            await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                            await message.channel.send(f'입력한 주소에 문제가 없는지 확인해보세요.')
                     else:
-                        shorturlembed = naverapi.shorturlEmbed(jsonresult=shorturlresult, color=color['naverapi'])
-                        shorturlembed.set_author(name=botname, icon_url=boticon)
-                        shorturlembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        shorturlmsg = await message.channel.send(embed=shorturlembed)
-                        msglog(message, f"[네이버주소단축: {shorturlresult['result']['orgUrl']}]")
+                        if shorturlresult == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message, '[네이버주소단축: 횟수초과]')
+                        elif type(shorturlresult) == int:
+                            await message.channel.send(f'오류! 코드: {shorturlresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message, '[네이버주소단축: 오류]')
+                        else:
+                            shorturlembed = naverapi.shorturlEmbed(jsonresult=shorturlresult, color=color['naverapi'])
+                            shorturlembed.set_author(name=botname, icon_url=boticon)
+                            shorturlembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            shorturlmsg = await message.channel.send(embed=shorturlembed)
+                            msglog(message, f"[네이버주소단축: {shorturlresult['result']['orgUrl']}]")
+                else:
+                    await message.channel.send('메시지에서 주소를 찾을 수 없습니다!')
 
             elif message.content.startswith(prefix + '무슨언어 '):
                 cmdlen = 4
