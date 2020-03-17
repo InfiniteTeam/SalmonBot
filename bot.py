@@ -621,7 +621,7 @@ async def on_message(message):
                                     else: 
                                         if naverblogsc['total'] > 100: naverblogallpage = (100-1)//perpage
                                         else: naverblogallpage = (naverblogsc['total']-1)//perpage
-                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverblogembed.set_author(name=botname, icon_url=boticon)
                                     naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverblogresult = await message.channel.send(embed=naverblogembed)
@@ -642,7 +642,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverblogembed.set_author(name=botname, icon_url=boticon)
                                                     naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverblogresult.edit(embed=naverblogembed)
@@ -675,7 +675,7 @@ async def on_message(message):
                                     else: 
                                         if navernewssc['total'] > 100: navernewsallpage = (100-1)//perpage
                                         else: navernewsallpage = (navernewssc['total']-1)//perpage
-                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     navernewsembed.set_author(name=botname, icon_url=boticon)
                                     navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     navernewsresult = await message.channel.send(embed=navernewsembed)
@@ -696,7 +696,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     navernewsembed.set_author(name=botname, icon_url=boticon)
                                                     navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await navernewsresult.edit(embed=navernewsembed)
@@ -729,7 +729,7 @@ async def on_message(message):
                                     else: 
                                         if naverbooksc['total'] > 100: naverbookallpage = (100-1)//perpage
                                         else: naverbookallpage = (naverbooksc['total']-1)//perpage
-                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverbookembed.set_author(name=botname, icon_url=boticon)
                                     naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverbookresult = await message.channel.send(embed=naverbookembed)
@@ -750,7 +750,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverbookembed.set_author(name=botname, icon_url=boticon)
                                                     naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverbookresult.edit(embed=naverbookembed)
@@ -783,7 +783,7 @@ async def on_message(message):
                                     else: 
                                         if naverencycsc['total'] > 100: naverencycallpage = (100-1)//perpage
                                         else: naverencycallpage = (naverencycsc['total']-1)//perpage
-                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverencycembed.set_author(name=botname, icon_url=boticon)
                                     naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverencycresult = await message.channel.send(embed=naverencycembed)
@@ -804,7 +804,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverencycembed.set_author(name=botname, icon_url=boticon)
                                                     naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverencycresult.edit(embed=naverencycembed)
@@ -837,7 +837,7 @@ async def on_message(message):
                                     else: 
                                         if navermoviesc['total'] > 100: navermovieallpage = (100-1)//perpage
                                         else: navermovieallpage = (navermoviesc['total']-1)//perpage
-                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     navermovieembed.set_author(name=botname, icon_url=boticon)
                                     navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     navermovieresult = await message.channel.send(embed=navermovieembed)
@@ -858,7 +858,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     navermovieembed.set_author(name=botname, icon_url=boticon)
                                                     navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await navermovieresult.edit(embed=navermovieembed)
@@ -891,7 +891,7 @@ async def on_message(message):
                                     else: 
                                         if navercafesc['total'] > 100: navercafeallpage = (100-1)//perpage
                                         else: navercafeallpage = (navercafesc['total']-1)//perpage
-                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     navercafeembed.set_author(name=botname, icon_url=boticon)
                                     navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     navercaferesult = await message.channel.send(embed=navercafeembed)
@@ -912,7 +912,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     navercafeembed.set_author(name=botname, icon_url=boticon)
                                                     navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await navercaferesult.edit(embed=navercafeembed)
@@ -945,7 +945,7 @@ async def on_message(message):
                                     else: 
                                         if naverkinsc['total'] > 100: naverkinallpage = (100-1)//perpage
                                         else: naverkinallpage = (naverkinsc['total']-1)//perpage
-                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverkinembed.set_author(name=botname, icon_url=boticon)
                                     naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverkinresult = await message.channel.send(embed=naverkinembed)
@@ -966,7 +966,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverkinembed.set_author(name=botname, icon_url=boticon)
                                                     naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverkinresult.edit(embed=naverkinembed)
@@ -999,7 +999,7 @@ async def on_message(message):
                                     else: 
                                         if naverwebkrsc['total'] > 30: naverwebkrallpage = (30-1)//perpage
                                         else: naverwebkrallpage = (naverwebkrsc['total']-1)//perpage
-                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverwebkrembed.set_author(name=botname, icon_url=boticon)
                                     naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverwebkrresult = await message.channel.send(embed=naverwebkrembed)
@@ -1020,7 +1020,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverwebkrembed.set_author(name=botname, icon_url=boticon)
                                                     naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverwebkrresult.edit(embed=naverwebkrembed)
@@ -1053,7 +1053,7 @@ async def on_message(message):
                                     else: 
                                         if naverimagesc['total'] > 100: naverimageallpage = (100-1)//perpage
                                         else: naverimageallpage = (naverimagesc['total']-1)//perpage
-                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverimageembed.set_author(name=botname, icon_url=boticon)
                                     naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverimageresult = await message.channel.send(embed=naverimageembed)
@@ -1074,7 +1074,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverimageembed.set_author(name=botname, icon_url=boticon)
                                                     naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverimageresult.edit(embed=naverimageembed)
@@ -1107,7 +1107,7 @@ async def on_message(message):
                                     else: 
                                         if navershopsc['total'] > 100: navershopallpage = (100-1)//perpage
                                         else: navershopallpage = (navershopsc['total']-1)//perpage
-                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     navershopembed.set_author(name=botname, icon_url=boticon)
                                     navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     navershopresult = await message.channel.send(embed=navershopembed)
@@ -1128,7 +1128,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     navershopembed.set_author(name=botname, icon_url=boticon)
                                                     navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await navershopresult.edit(embed=navershopembed)
@@ -1161,7 +1161,7 @@ async def on_message(message):
                                     else: 
                                         if naverdocsc['total'] > 100: naverdocallpage = (100-1)//perpage
                                         else: naverdocallpage = (naverdocsc['total']-1)//perpage
-                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                     naverdocembed.set_author(name=botname, icon_url=boticon)
                                     naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                     naverdocresult = await message.channel.send(embed=naverdocembed)
@@ -1182,7 +1182,7 @@ async def on_message(message):
                                             if type(pagect[0]) == int:
                                                 if page != pagect[0]:
                                                     page = pagect[0]
-                                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naversearch'], query=query, naversort=naversort)
+                                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
                                                     naverdocembed.set_author(name=botname, icon_url=boticon)
                                                     naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                                                     await naverdocresult.edit(embed=naverdocembed)
@@ -1211,7 +1211,7 @@ async def on_message(message):
                         await message.channel.send(f'오류! 코드: {shorturlresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                         msglog(message, '[네이버주소단축: 오류]')
                     else:
-                        shorturlembed = naverapi.shorturlEmbed(jsonresult=shorturlresult, color=color['naversearch'])
+                        shorturlembed = naverapi.shorturlEmbed(jsonresult=shorturlresult, color=color['naverapi'])
                         shorturlembed.set_author(name=botname, icon_url=boticon)
                         shorturlembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         shorturlmsg = await message.channel.send(embed=shorturlembed)
@@ -1233,7 +1233,7 @@ async def on_message(message):
                         await message.channel.send(f'오류! 코드: {detectlangsresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                         msglog(message, '[네이버언어감지: 오류]')
                     else:
-                        detectlangsembed = naverapi.detectlangsEmbed(jsonresult=detectlangsresult, orgtext=query, color=color['naversearch'])
+                        detectlangsembed = naverapi.detectlangsEmbed(jsonresult=detectlangsresult, orgtext=query, color=color['naverapi'])
                         detectlangsembed.set_author(name=botname, icon_url=boticon)
                         detectlangsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         shorturlmsg = await message.channel.send(embed=detectlangsembed)
@@ -1251,13 +1251,65 @@ async def on_message(message):
                     await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
                 if multitags != False:
                     if multitags:
-                        tagsstr = '`, `'.join(multitags)
-                        embed = discord.Embed(title='🔲 이미지 태그 생성', description=f'생성된 태그:\n`{tagsstr}`')
+                        stags = []
+                        for onetag in multitags:
+                            stags.append('#' + onetag)
+                        tagsstr = '`, `'.join(stags)
+                        embed = discord.Embed(title='🔲 이미지 태그 생성', description=f'생성된 태그:\n`{tagsstr}`', color=color['kakaoapi'])
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
                     else:
                         await message.channel.send('생성된 태그가 없습니다!')
+            
+            elif message.content.startswith(prefix + '문자감지'):
+                async with message.channel.typing():
+                    msgurls = salmoncmds.urlExtract(message.content)
+                    if len(message.attachments):
+                        textstarttime = time.time()
+                        embed = discord.Embed(title='🔠 이미지 문자 감지 - (1/3단계)', description='\n**1단계: 사진 파일을 가져오고 있습니다...**', color=color['kakaoapi'])
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        textdrmsg = await message.channel.send(embed=embed)
+                        textdr_file = await message.attachments[0].read()
+                        try:
+                            embed = discord.Embed(title='🔠 이미지 문자 감지 - (2/3단계)', description='\n**2단계: 문자를 찾는 중입니다...**', color=color['kakaoapi'])
+                            embed.set_thumbnail(url=message.attachments[0].url)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await textdrmsg.edit(embed=embed)
+                            textdetect_results = kakaoapi.text_detect(kakaoapi_secret, textdr_file)
+
+                            embed = discord.Embed(title='🔠 이미지 문자 감지 - (3/3단계)', description='\n**3단계: 문자를 변환 중입니다...**', color=color['kakaoapi'])
+                            embed.set_thumbnail(url=message.attachments[0].url)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await textdrmsg.edit(embed=embed)
+                            textrecog_results = kakaoapi.text_recognize(kakaoapi_secret, textdr_file, textdetect_results)
+
+                            textendtime = time.time()
+                        except Exception as ex:
+                            if str(ex) == '400 Client Error':
+                                embed = discord.Embed(title='🔠 이미지 문자 감지 - 오류', description=f'작업 중 오류가 발생했습니다. 첨부한 파일이 정상적인 이미지가 맞는지 확인해주세요.', color=color['error'])
+                                embed.set_author(name=botname, icon_url=boticon)
+                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                await textdrmsg.edit()
+                            else:
+                                await message.channel.send(embed=errormsg(ex, message))
+                        else:
+                            timetotal = round(textendtime-textstarttime, 2)
+                            recogtext = []
+                            for onebox in textrecog_results:
+                                if onebox != '':
+                                    recogtext.append(onebox)
+                            textdr_str = '`, `'.join(recogtext)
+                            embed = discord.Embed(title='🔠 이미지 문자 감지 - 완료!', description=f'\n**문자 감지 결과({timetotal} 초):**\n\n`{textdr_str}`', color=color['kakaoapi'])
+                            embed.set_thumbnail(url=message.attachments[0].url)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await textdrmsg.edit(embed=embed)
+                    else:
+                        await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
 
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
