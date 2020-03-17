@@ -1250,7 +1250,6 @@ async def on_message(message):
                     multitags = False
                     await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
                 if multitags != False:
-                    print(multitags)
                     if multitags:
                         tagsstr = '`, `'.join(multitags)
                         embed = discord.Embed(title='🔲 이미지 태그 생성', description=f'생성된 태그:\n`{tagsstr}`')
@@ -1324,6 +1323,20 @@ async def on_message(message):
                         await message.channel.send('공지 전송 완료.')
                     elif message.content == prefix + '//error':
                         raise Exception('TEST')
+                    elif message.content.startswith(prefix + '//logfile '):
+                        cmdlen = 11
+                        async with message.channel.typing():
+                            if message.content[11:] == 'salmon':
+                                with open('./logs/general/salmon.log', 'rb') as logfile:
+                                    dfile = discord.File(fp=logfile, filename='salmon.log')
+                            elif message.content[11:] == 'ping':
+                                with open('./logs/ping/ping.log', 'rb') as logfile:
+                                    dfile = discord.File(fp=logfile, filename='ping.log')
+                            elif message.content[11:] == 'error':
+                                with open('./logs/general/error.log', 'rb') as logfile:
+                                    dfile = discord.File(fp=logfile, filename='error.log')
+                            await message.channel.send(file=dfile)
+
             elif message.content[len(prefix)] == '%': pass
             else: await message.channel.send(embed=notexists())
         else:
