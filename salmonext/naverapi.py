@@ -328,7 +328,7 @@ def shortUrl(clientid, clientsecret, url):
         result = response_body.decode('utf-8')
         return json.loads(result)
     else:
-        return "Error Code:" + rescode
+        return rescode
 
 def shorturlEmbed(jsonresult, color):
     orgurl = jsonresult['result']['orgUrl']
@@ -351,7 +351,7 @@ def detectLangs(clientid, clientsecret, query):
         result = response_body.decode('utf-8')
         return json.loads(result)
     else:
-        return "Error Code:" + rescode
+        return rescode
 
 def detectlangsEmbed(jsonresult, orgtext, color):
     lang = jsonresult['langCode']

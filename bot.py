@@ -105,6 +105,10 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 naverapi_id = openapi['naver']['clientID']
 naverapi_secret = openapi['naver']['clientSec']
 
+#================ Kakao Open API ===============
+kakaoapi_id = openapi['kakao']['clientID']
+kakaoapi_secret = openapi['kakao']['clientSec']
+
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
@@ -1236,6 +1240,27 @@ async def on_message(message):
                         msglog(message, f"[네이버언어감지: {detectlangsresult['langCode']}]")
 
             elif message.content.startswith(prefix + '이미지태그'):
+                '''
+                url = message.attachments[0]['url']
+                    request_url = "https://kapi.kakao.com/v1/vision/multitag/generate"
+                    headers= {"Authorization": "카카오 토큰"}
+                    params = {"image_url": url}
+                    response = requests.post(request_url, headers=headers, data=params)
+                    result = response.json()
+                    resulttext = ""
+                    result = result['result']['label_kr']
+                    for i in result:
+                        resulttext += ("#"+i+" ")
+                    if resulttext == "":
+                        embed = embed_text(title="**TUNA BOT - 태그**", description=":hash: **생성된 태그가 없습니다.**")
+                        embed.set_thumbnail(url=url)
+                        await message.channel.send(embed=embed)
+                    else:
+                        resulttext = resulttext[:(len(resulttext)-1)]
+                        embed = discord.Embed(title="**TUNA BOT - 태그**", description=f":hash: **생성된 태그 -**\n```{resulttext}```")
+                        embed.set_thumbnail(url=url)
+                        await message.channel.send(embed=embed)
+                '''
                 url = message.attachments[0]['url']
                 request_url = "https://kapi.kakao.com/v1/vision/multitag/generate"
                 headers= {"Authorization": "카카오 토큰"}
