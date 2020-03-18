@@ -599,652 +599,711 @@ async def on_message(message):
                     if searchstr.startswith(prefix + '네이버검색 블로그'):
                         cmdlen = 9
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverblogsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverblogsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverblogsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverblogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverblogsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverblogsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='blog', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverblogsc['total'] < perpage: naverblogallpage = 0
-                                    else: 
-                                        if naverblogsc['total'] > 100: naverblogallpage = (100-1)//perpage
-                                        else: naverblogallpage = (naverblogsc['total']-1)//perpage
-                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverblogembed.set_author(name=botname, icon_url=boticon)
-                                    naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverblogresult = await message.channel.send(embed=naverblogembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverblogresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 블로그검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverblogresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverblogresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverblogembed.set_author(name=botname, icon_url=boticon)
-                                                    naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverblogresult.edit(embed=naverblogembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 블로그검색 정지]')
+                                    if naverblogsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverblogsc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverblogsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverblogsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverblogsc['total'] < perpage: naverblogallpage = 0
+                                        else: 
+                                            if naverblogsc['total'] > 100: naverblogallpage = (100-1)//perpage
+                                            else: naverblogallpage = (naverblogsc['total']-1)//perpage
+                                        naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverblogembed.set_author(name=botname, icon_url=boticon)
+                                        naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverblogresult = await message.channel.send(embed=naverblogembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverblogresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 블로그검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverblogresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverblogresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverblogembed = naverapi.blogEmbed(jsonresults=naverblogsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverblogembed.set_author(name=botname, icon_url=boticon)
+                                                        naverblogembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverblogresult.edit(embed=naverblogembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 블로그검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 뉴스'):
                         cmdlen = 8
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                navernewssc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if navernewssc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(navernewssc) == int:
-                                    await message.channel.send(f'오류! 코드: {navernewssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif navernewssc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    navernewssc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='news', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if navernewssc['total'] < perpage: navernewsallpage = 0
-                                    else: 
-                                        if navernewssc['total'] > 100: navernewsallpage = (100-1)//perpage
-                                        else: navernewsallpage = (navernewssc['total']-1)//perpage
-                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    navernewsembed.set_author(name=botname, icon_url=boticon)
-                                    navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    navernewsresult = await message.channel.send(embed=navernewsembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await navernewsresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 뉴스검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = navernewsresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await navernewsresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    navernewsembed.set_author(name=botname, icon_url=boticon)
-                                                    navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await navernewsresult.edit(embed=navernewsembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 뉴스검색 정지]')
+                                    if navernewssc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(navernewssc) == int:
+                                        await message.channel.send(f'오류! 코드: {navernewssc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif navernewssc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if navernewssc['total'] < perpage: navernewsallpage = 0
+                                        else: 
+                                            if navernewssc['total'] > 100: navernewsallpage = (100-1)//perpage
+                                            else: navernewsallpage = (navernewssc['total']-1)//perpage
+                                        navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        navernewsembed.set_author(name=botname, icon_url=boticon)
+                                        navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        navernewsresult = await message.channel.send(embed=navernewsembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await navernewsresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 뉴스검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = navernewsresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await navernewsresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        navernewsembed = naverapi.newsEmbed(jsonresults=navernewssc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        navernewsembed.set_author(name=botname, icon_url=boticon)
+                                                        navernewsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await navernewsresult.edit(embed=navernewsembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 뉴스검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 책'):
                         cmdlen = 7
                         perpage = 1
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverbooksc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverbooksc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverbooksc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverbooksc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverbooksc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverbooksc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='book', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverbooksc['total'] < perpage: naverbookallpage = 0
-                                    else: 
-                                        if naverbooksc['total'] > 100: naverbookallpage = (100-1)//perpage
-                                        else: naverbookallpage = (naverbooksc['total']-1)//perpage
-                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverbookembed.set_author(name=botname, icon_url=boticon)
-                                    naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverbookresult = await message.channel.send(embed=naverbookembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverbookresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 책검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverbookresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverbookresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=10, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverbookembed.set_author(name=botname, icon_url=boticon)
-                                                    naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverbookresult.edit(embed=naverbookembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 책검색 정지]')
+                                    if naverbooksc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverbooksc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverbooksc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverbooksc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverbooksc['total'] < perpage: naverbookallpage = 0
+                                        else: 
+                                            if naverbooksc['total'] > 100: naverbookallpage = (100-1)//perpage
+                                            else: naverbookallpage = (naverbooksc['total']-1)//perpage
+                                        naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverbookembed.set_author(name=botname, icon_url=boticon)
+                                        naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverbookresult = await message.channel.send(embed=naverbookembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverbookresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 책검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverbookresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverbookresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=10, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverbookembed = naverapi.bookEmbed(jsonresults=naverbooksc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverbookembed.set_author(name=botname, icon_url=boticon)
+                                                        naverbookembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverbookresult.edit(embed=naverbookembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 책검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 백과사전'):
                         cmdlen = 10
                         perpage = 1
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverencycsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverencycsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverencycsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverencycsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverencycsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverencycsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='encyc', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await globalmsg.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverencycsc['total'] < perpage: naverencycallpage = 0
-                                    else: 
-                                        if naverencycsc['total'] > 100: naverencycallpage = (100-1)//perpage
-                                        else: naverencycallpage = (naverencycsc['total']-1)//perpage
-                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverencycembed.set_author(name=botname, icon_url=boticon)
-                                    naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverencycresult = await message.channel.send(embed=naverencycembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverencycresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 백과사전검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverencycresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverencycresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=10, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverencycembed.set_author(name=botname, icon_url=boticon)
-                                                    naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverencycresult.edit(embed=naverencycembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 백과사전검색 정지]')
+                                    if naverencycsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverencycsc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverencycsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverencycsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverencycsc['total'] < perpage: naverencycallpage = 0
+                                        else: 
+                                            if naverencycsc['total'] > 100: naverencycallpage = (100-1)//perpage
+                                            else: naverencycallpage = (naverencycsc['total']-1)//perpage
+                                        naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverencycembed.set_author(name=botname, icon_url=boticon)
+                                        naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverencycresult = await message.channel.send(embed=naverencycembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverencycresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 백과사전검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverencycresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverencycresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=10, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverencycembed = naverapi.encycEmbed(jsonresults=naverencycsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverencycembed.set_author(name=botname, icon_url=boticon)
+                                                        naverencycembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverencycresult.edit(embed=naverencycembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 백과사전검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 영화'):
                         cmdlen = 8
                         perpage = 1
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                navermoviesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='movie', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if navermoviesc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(navermoviesc) == int:
-                                    await message.channel.send(f'오류! 코드: {navermoviesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif navermoviesc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    navermoviesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='movie', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if navermoviesc['total'] < perpage: navermovieallpage = 0
-                                    else: 
-                                        if navermoviesc['total'] > 100: navermovieallpage = (100-1)//perpage
-                                        else: navermovieallpage = (navermoviesc['total']-1)//perpage
-                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    navermovieembed.set_author(name=botname, icon_url=boticon)
-                                    navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    navermovieresult = await message.channel.send(embed=navermovieembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await navermovieresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 영화검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = navermovieresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await navermovieresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=10, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    navermovieembed.set_author(name=botname, icon_url=boticon)
-                                                    navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await navermovieresult.edit(embed=navermovieembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 영화검색 정지]')
+                                    if navermoviesc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(navermoviesc) == int:
+                                        await message.channel.send(f'오류! 코드: {navermoviesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif navermoviesc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if navermoviesc['total'] < perpage: navermovieallpage = 0
+                                        else: 
+                                            if navermoviesc['total'] > 100: navermovieallpage = (100-1)//perpage
+                                            else: navermovieallpage = (navermoviesc['total']-1)//perpage
+                                        navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        navermovieembed.set_author(name=botname, icon_url=boticon)
+                                        navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        navermovieresult = await message.channel.send(embed=navermovieembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await navermovieresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 영화검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = navermovieresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await navermovieresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=10, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        navermovieembed = naverapi.movieEmbed(jsonresults=navermoviesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        navermovieembed.set_author(name=botname, icon_url=boticon)
+                                                        navermovieembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await navermovieresult.edit(embed=navermovieembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 영화검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 카페글'):
                         cmdlen = 9
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                navercafesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='cafearticle', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if navercafesc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(navercafesc) == int:
-                                    await message.channel.send(f'오류! 코드: {navercafesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif navercafesc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    navercafesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='cafearticle', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if navercafesc['total'] < perpage: navercafeallpage = 0
-                                    else: 
-                                        if navercafesc['total'] > 100: navercafeallpage = (100-1)//perpage
-                                        else: navercafeallpage = (navercafesc['total']-1)//perpage
-                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    navercafeembed.set_author(name=botname, icon_url=boticon)
-                                    navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    navercaferesult = await message.channel.send(embed=navercafeembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await navercaferesult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 카페글검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = navercaferesult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await navercaferesult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navercaferesult, allpage=navercafeallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    navercafeembed.set_author(name=botname, icon_url=boticon)
-                                                    navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await navercaferesult.edit(embed=navercafeembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 카페글검색 정지]')
+                                    if navercafesc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(navercafesc) == int:
+                                        await message.channel.send(f'오류! 코드: {navercafesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif navercafesc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if navercafesc['total'] < perpage: navercafeallpage = 0
+                                        else: 
+                                            if navercafesc['total'] > 100: navercafeallpage = (100-1)//perpage
+                                            else: navercafeallpage = (navercafesc['total']-1)//perpage
+                                        navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        navercafeembed.set_author(name=botname, icon_url=boticon)
+                                        navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        navercaferesult = await message.channel.send(embed=navercafeembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await navercaferesult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 카페글검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = navercaferesult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await navercaferesult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navercaferesult, allpage=navercafeallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        navercafeembed = naverapi.cafeEmbed(jsonresults=navercafesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        navercafeembed.set_author(name=botname, icon_url=boticon)
+                                                        navercafeembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await navercaferesult.edit(embed=navercafeembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 카페글검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 지식인'):
                         cmdlen = 9
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverkinsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='kin', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverkinsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverkinsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverkinsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverkinsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverkinsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='kin', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverkinsc['total'] < perpage: naverkinallpage = 0
-                                    else: 
-                                        if naverkinsc['total'] > 100: naverkinallpage = (100-1)//perpage
-                                        else: naverkinallpage = (naverkinsc['total']-1)//perpage
-                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverkinembed.set_author(name=botname, icon_url=boticon)
-                                    naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverkinresult = await message.channel.send(embed=naverkinembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverkinresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 지식iN검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverkinresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverkinresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverkinresult, allpage=naverkinallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverkinembed.set_author(name=botname, icon_url=boticon)
-                                                    naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverkinresult.edit(embed=naverkinembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 지식iN검색 정지]')
+                                    if naverkinsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverkinsc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverkinsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverkinsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverkinsc['total'] < perpage: naverkinallpage = 0
+                                        else: 
+                                            if naverkinsc['total'] > 100: naverkinallpage = (100-1)//perpage
+                                            else: naverkinallpage = (naverkinsc['total']-1)//perpage
+                                        naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverkinembed.set_author(name=botname, icon_url=boticon)
+                                        naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverkinresult = await message.channel.send(embed=naverkinembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverkinresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 지식iN검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverkinresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverkinresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverkinresult, allpage=naverkinallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverkinembed = naverapi.kinEmbed(jsonresults=naverkinsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverkinembed.set_author(name=botname, icon_url=boticon)
+                                                        naverkinembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverkinresult.edit(embed=naverkinembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 지식iN검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 웹문서'):
                         cmdlen = 9
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverwebkrsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='webkr', query=query, display=30, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverwebkrsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverwebkrsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverwebkrsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverwebkrsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverwebkrsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='webkr', query=query, display=30, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverwebkrsc['total'] < perpage: naverwebkrallpage = 0
-                                    else: 
-                                        if naverwebkrsc['total'] > 30: naverwebkrallpage = (30-1)//perpage
-                                        else: naverwebkrallpage = (naverwebkrsc['total']-1)//perpage
-                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverwebkrembed.set_author(name=botname, icon_url=boticon)
-                                    naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverwebkrresult = await message.channel.send(embed=naverwebkrembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverwebkrresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 웹문서검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverwebkrresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverwebkrresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverwebkrresult, allpage=naverwebkrallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverwebkrembed.set_author(name=botname, icon_url=boticon)
-                                                    naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverwebkrresult.edit(embed=naverwebkrembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 웹문서검색 정지]')
+                                    if naverwebkrsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverwebkrsc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverwebkrsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverwebkrsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverwebkrsc['total'] < perpage: naverwebkrallpage = 0
+                                        else: 
+                                            if naverwebkrsc['total'] > 30: naverwebkrallpage = (30-1)//perpage
+                                            else: naverwebkrallpage = (naverwebkrsc['total']-1)//perpage
+                                        naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverwebkrembed.set_author(name=botname, icon_url=boticon)
+                                        naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverwebkrresult = await message.channel.send(embed=naverwebkrembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverwebkrresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 웹문서검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverwebkrresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverwebkrresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverwebkrresult, allpage=naverwebkrallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverwebkrembed = naverapi.webkrEmbed(jsonresults=naverwebkrsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverwebkrembed.set_author(name=botname, icon_url=boticon)
+                                                        naverwebkrembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverwebkrresult.edit(embed=naverwebkrembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 웹문서검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 이미지'):
                         cmdlen = 9
                         perpage = 1
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverimagesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='image', query=query, display=100, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverimagesc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverimagesc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverimagesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverimagesc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverimagesc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='image', query=query, display=100, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverimagesc['total'] < perpage: naverimageallpage = 0
-                                    else: 
-                                        if naverimagesc['total'] > 100: naverimageallpage = (100-1)//perpage
-                                        else: naverimageallpage = (naverimagesc['total']-1)//perpage
-                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverimageembed.set_author(name=botname, icon_url=boticon)
-                                    naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverimageresult = await message.channel.send(embed=naverimageembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverimageresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 이미지검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverimageresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverimageresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverimageresult, allpage=naverimageallpage, perpage=10, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverimageembed.set_author(name=botname, icon_url=boticon)
-                                                    naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverimageresult.edit(embed=naverimageembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 이미지검색 정지]')
+                                    if naverimagesc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverimagesc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverimagesc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverimagesc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverimagesc['total'] < perpage: naverimageallpage = 0
+                                        else: 
+                                            if naverimagesc['total'] > 100: naverimageallpage = (100-1)//perpage
+                                            else: naverimageallpage = (naverimagesc['total']-1)//perpage
+                                        naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverimageembed.set_author(name=botname, icon_url=boticon)
+                                        naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverimageresult = await message.channel.send(embed=naverimageembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverimageresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 이미지검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverimageresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverimageresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverimageresult, allpage=naverimageallpage, perpage=10, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverimageembed = naverapi.imageEmbed(jsonresults=naverimagesc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverimageembed.set_author(name=botname, icon_url=boticon)
+                                                        naverimageembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverimageresult.edit(embed=naverimageembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 이미지검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 쇼핑'):
                         cmdlen = 8
                         perpage = 1
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                navershopsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='shop', query=query, display=100, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if navershopsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(navershopsc) == int:
-                                    await message.channel.send(f'오류! 코드: {navershopsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif navershopsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    navershopsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='shop', query=query, display=100, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if navershopsc['total'] < perpage: navershopallpage = 0
-                                    else: 
-                                        if navershopsc['total'] > 100: navershopallpage = (100-1)//perpage
-                                        else: navershopallpage = (navershopsc['total']-1)//perpage
-                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    navershopembed.set_author(name=botname, icon_url=boticon)
-                                    navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    navershopresult = await message.channel.send(embed=navershopembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await navershopresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 쇼핑검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = navershopresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await navershopresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navershopresult, allpage=navershopallpage, perpage=10, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    navershopembed.set_author(name=botname, icon_url=boticon)
-                                                    navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await navershopresult.edit(embed=navershopembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 쇼핑검색 정지]')
+                                    if navershopsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(navershopsc) == int:
+                                        await message.channel.send(f'오류! 코드: {navershopsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif navershopsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if navershopsc['total'] < perpage: navershopallpage = 0
+                                        else: 
+                                            if navershopsc['total'] > 100: navershopallpage = (100-1)//perpage
+                                            else: navershopallpage = (navershopsc['total']-1)//perpage
+                                        navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        navershopembed.set_author(name=botname, icon_url=boticon)
+                                        navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        navershopresult = await message.channel.send(embed=navershopembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await navershopresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 쇼핑검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = navershopresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await navershopresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navershopresult, allpage=navershopallpage, perpage=10, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        navershopembed = naverapi.shopEmbed(jsonresults=navershopsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        navershopembed.set_author(name=botname, icon_url=boticon)
+                                                        navershopembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await navershopresult.edit(embed=navershopembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 쇼핑검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     elif searchstr.startswith(prefix + '네이버검색 전문자료'):
                         cmdlen = 10
                         perpage = 4
-                        if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
-                            page = 0
-                            query = searchstr[len(prefix)+1+cmdlen:]
-                            try:
-                                naverdocsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='doc', query=query, sort=naversortcode)
-                            except Exception as ex:
-                                await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                                await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                            else:
-                                if naverdocsc == 429:
-                                    await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 횟수초과]')
-                                elif type(naverdocsc) == int:
-                                    await message.channel.send(f'오류! 코드: {naverdocsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                                    msglog(message, '[네이버검색: 오류]')
-                                elif naverdocsc['total'] == 0:
-                                    await message.channel.send('검색 결과가 없습니다!')
+                        if searchstr[len(prefix)+1+cmdlen:]:
+                            if len(prefix + searchstr) >= len(prefix)+1+cmdlen and searchstr[1+cmdlen] == ' ':
+                                page = 0
+                                query = searchstr[len(prefix)+1+cmdlen:]
+                                try:
+                                    naverdocsc = naverapi.naverSearch(id=naverapi_id, secret=naverapi_secret, sctype='doc', query=query, sort=naversortcode)
+                                except Exception as ex:
+                                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                                 else:
-                                    if naverdocsc['total'] < perpage: naverdocallpage = 0
-                                    else: 
-                                        if naverdocsc['total'] > 100: naverdocallpage = (100-1)//perpage
-                                        else: naverdocallpage = (naverdocsc['total']-1)//perpage
-                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                    naverdocembed.set_author(name=botname, icon_url=boticon)
-                                    naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                    naverdocresult = await message.channel.send(embed=naverdocembed)
-                                    for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                        await naverdocresult.add_reaction(emoji)
-                                    msglog(message, '[네이버검색: 전문자료검색]')
-                                    while True:
-                                        msglog(message, '[네이버검색: 반응 추가함]')
-                                        naverresult = naverdocresult
-                                        try:
-                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
-                                        except asyncio.TimeoutError:
-                                            await naverdocresult.clear_reactions()
-                                            break
-                                        else:
-                                            pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverdocresult, allpage=naverdocallpage, perpage=4, nowpage=page)
-                                            await pagect[1]
-                                            if type(pagect[0]) == int:
-                                                if page != pagect[0]:
-                                                    page = pagect[0]
-                                                    naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
-                                                    naverdocembed.set_author(name=botname, icon_url=boticon)
-                                                    naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                    await naverdocresult.edit(embed=naverdocembed)
-                                            elif pagect[0] == None: break
-                                            
-                                msglog(message, '[네이버검색: 전문자료검색 정지]')
+                                    if naverdocsc == 429:
+                                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 횟수초과]')
+                                    elif type(naverdocsc) == int:
+                                        await message.channel.send(f'오류! 코드: {naverdocsc}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                                        msglog(message, '[네이버검색: 오류]')
+                                    elif naverdocsc['total'] == 0:
+                                        await message.channel.send('검색 결과가 없습니다!')
+                                    else:
+                                        if naverdocsc['total'] < perpage: naverdocallpage = 0
+                                        else: 
+                                            if naverdocsc['total'] > 100: naverdocallpage = (100-1)//perpage
+                                            else: naverdocallpage = (naverdocsc['total']-1)//perpage
+                                        naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                        naverdocembed.set_author(name=botname, icon_url=boticon)
+                                        naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        naverdocresult = await message.channel.send(embed=naverdocembed)
+                                        for emoji in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                            await naverdocresult.add_reaction(emoji)
+                                        msglog(message, '[네이버검색: 전문자료검색]')
+                                        while True:
+                                            msglog(message, '[네이버검색: 반응 추가함]')
+                                            naverresult = naverdocresult
+                                            try:
+                                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=navercheck)
+                                            except asyncio.TimeoutError:
+                                                await naverdocresult.clear_reactions()
+                                                break
+                                            else:
+                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverdocresult, allpage=naverdocallpage, perpage=4, nowpage=page)
+                                                await pagect[1]
+                                                if type(pagect[0]) == int:
+                                                    if page != pagect[0]:
+                                                        page = pagect[0]
+                                                        naverdocembed = naverapi.docEmbed(jsonresults=naverdocsc, page=page, perpage=perpage, color=color['naverapi'], query=query, naversort=naversort)
+                                                        naverdocembed.set_author(name=botname, icon_url=boticon)
+                                                        naverdocembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                        await naverdocresult.edit(embed=naverdocembed)
+                                                elif pagect[0] == None: break
+                                                
+                                    msglog(message, '[네이버검색: 전문자료검색 정지]')
+
+                        else:
+                            await message.channel.send('검색어를 입력해주세요.')
+                            msglog(message, '[네이버검색: 검색어 없음]')
 
                     else: await message.channel.send(embed=notexists())
                 
                 else:
                     await message.channel.send(embed=onlyguild())
 
-            elif message.content.startswith(prefix + '웹주소단축 '):
+            elif message.content.startswith(prefix + '웹주소단축'):
                 cmdlen = 5
-                urls = salmoncmds.urlExtract(message.content)
-                if urls:
-                    url = urls[0]
+                url = message.content[len(prefix)+1+cmdlen:]
+                if url and message.content.startswith(prefix + '웹주소단축 '):
                     try:
                         shorturlresult = naverapi.shortUrl(clientid=naverapi_id, clientsecret=naverapi_secret, url=url)
                     except Exception as ex:
                         if str(ex) == 'HTTP Error 403: Forbidden':
-                            await message.channel.send('올바르지 않은 주소입니다.')
+                            await message.channel.send('올바르지 않은 주소이거나 이미 단축된 주소입니다.')
                         else:
                             await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
                             await message.channel.send(f'입력한 주소에 문제가 없는지 확인해보세요.')
                     else:
                         if shorturlresult == 429:
-                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 주소 단축 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
                             msglog(message, '[네이버주소단축: 횟수초과]')
                         elif type(shorturlresult) == int:
-                            await message.channel.send(f'오류! 코드: {shorturlresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            await message.channel.send(f'오류! 코드: {shorturlresult}\n주소 단축 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
                             msglog(message, '[네이버주소단축: 오류]')
                         else:
                             shorturlembed = naverapi.shorturlEmbed(jsonresult=shorturlresult, color=color['naverapi'])
                             shorturlembed.set_author(name=botname, icon_url=boticon)
                             shorturlembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                            shorturlmsg = await message.channel.send(embed=shorturlembed)
+                            await message.channel.send(embed=shorturlembed)
                             msglog(message, f"[네이버주소단축: {shorturlresult['result']['orgUrl']}]")
                 else:
-                    await message.channel.send('메시지에서 주소를 찾을 수 없습니다!')
+                    await message.channel.send('단축할 웹주소(URL)을 입력해 주세요.')
+                    msglog(message, "[네이버주소단축: 주소없음]")
 
-            elif message.content.startswith(prefix + '무슨언어 '):
+            elif message.content.startswith(prefix + '무슨언어'):
                 cmdlen = 4
                 query = message.content[len(prefix)+1+cmdlen:]
-                try:
-                    detectlangsresult = naverapi.detectLangs(clientid=naverapi_id, clientsecret=naverapi_secret, query=query)
-                except Exception as ex:
-                    await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
-                    await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
-                else:
-                    if detectlangsresult == 429:
-                        await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
-                        msglog(message, '[네이버언어감지: 횟수초과]')
-                    elif type(detectlangsresult) == int:
-                        await message.channel.send(f'오류! 코드: {detectlangsresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
-                        msglog(message, '[네이버언어감지: 오류]')
+                if query and message.content.startswith(prefix + '무슨언어 '):
+                    try:
+                        detectlangsresult = naverapi.detectLangs(clientid=naverapi_id, clientsecret=naverapi_secret, query=query)
+                    except Exception as ex:
+                        await message.channel.send(embed=errormsg(f'EXCEPT: {ex}', message))
+                        await message.channel.send(f'검색어에 문제가 없는지 확인해보세요.')
                     else:
-                        detectlangsembed = naverapi.detectlangsEmbed(jsonresult=detectlangsresult, orgtext=query, color=color['naverapi'])
-                        detectlangsembed.set_author(name=botname, icon_url=boticon)
-                        detectlangsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        shorturlmsg = await message.channel.send(embed=detectlangsembed)
-                        msglog(message, f"[네이버언어감지: {detectlangsresult['langCode']}]")
+                        if detectlangsresult == 429:
+                            await message.channel.send('봇이 하루 사용 가능한 네이버 검색 횟수가 초과되었습니다! 내일 다시 시도해주세요.')
+                            msglog(message, '[네이버언어감지: 횟수초과]')
+                        elif type(detectlangsresult) == int:
+                            await message.channel.send(f'오류! 코드: {detectlangsresult}\n검색 결과를 불러올 수 없습니다. 네이버 API의 일시적인 문제로 예상되며, 나중에 다시 시도해주세요.')
+                            msglog(message, '[네이버언어감지: 오류]')
+                        else:
+                            detectlangsembed = naverapi.detectlangsEmbed(jsonresult=detectlangsresult, orgtext=query, color=color['naverapi'])
+                            detectlangsembed.set_author(name=botname, icon_url=boticon)
+                            detectlangsembed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            shorturlmsg = await message.channel.send(embed=detectlangsembed)
+                            msglog(message, f"[네이버언어감지: {detectlangsresult['langCode']}]")
+                else:
+                    await message.channel.send('언어를 감지할 텍스트를 입력해 주세요.')
+                    msglog(message, "[네이버언어감지: 텍스트없음]")
 
             elif message.content.startswith(prefix + '이미지태그'):
                 msgurls = salmoncmds.urlExtract(message.content)
@@ -1256,6 +1315,7 @@ async def on_message(message):
                 else:
                     multitags = False
                     await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                    msglog(message, '[이미지태그: 파일 없음]')
                 if multitags != False:
                     if multitags:
                         stags = []
@@ -1266,20 +1326,22 @@ async def on_message(message):
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
+                        msglog(message, '[이미지태그: 생성 완료]')
                     else:
                         await message.channel.send('생성된 태그가 없습니다!')
+                        msglog(message, '[이미지태그: 태그 없음]')
             
             elif message.content.startswith(prefix + '문자감지'):
-                async with message.channel.typing():
-                    msgurls = salmoncmds.urlExtract(message.content)
-                    if len(message.attachments):
-                        textstarttime = time.time()
-                        embed = discord.Embed(title='🔠 이미지 문자 감지 - (1/3단계)', description='\n**1단계: 사진 파일을 가져오고 있습니다...**', color=color['kakaoapi'])
-                        embed.set_author(name=botname, icon_url=boticon)
-                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        textdrmsg = await message.channel.send(embed=embed)
-                        textdr_file = await message.attachments[0].read()
+                if len(message.attachments):
+                    async with message.channel.typing():
                         try:
+                            textstarttime = time.time()
+                            embed = discord.Embed(title='🔠 이미지 문자 감지 - (1/3단계)', description='\n**1단계: 사진 파일을 가져오고 있습니다...**', color=color['kakaoapi'])
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            textdrmsg = await message.channel.send(embed=embed)
+                            textdr_file = await message.attachments[0].read()
+
                             embed = discord.Embed(title='🔠 이미지 문자 감지 - (2/3단계)', description='\n**2단계: 문자를 찾는 중입니다...**', color=color['kakaoapi'])
                             embed.set_thumbnail(url=message.attachments[0].url)
                             embed.set_author(name=botname, icon_url=boticon)
@@ -1296,11 +1358,12 @@ async def on_message(message):
 
                             textendtime = time.time()
                         except Exception as ex:
-                            if str(ex) == '400 Client Error':
-                                embed = discord.Embed(title='🔠 이미지 문자 감지 - 오류', description=f'작업 중 오류가 발생했습니다. 첨부한 파일이 정상적인 이미지가 맞는지 확인해주세요.', color=color['error'])
+                            if str(ex).startswith('400 Client Error'):
+                                embed = discord.Embed(title='🔠 이미지 문자 감지', description='사진에서 문자가 감지되지 않았습니다!\n정상적인 이미지 파일인지 확인해보세요.', color=color['error'])
                                 embed.set_author(name=botname, icon_url=boticon)
                                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                await textdrmsg.edit()
+                                await textdrmsg.edit(embed=embed)
+                                msglog(message, '[문자감지: 문자 감지 실패]')
                             else:
                                 await message.channel.send(embed=errormsg(ex, message))
                         else:
@@ -1315,8 +1378,10 @@ async def on_message(message):
                             embed.set_author(name=botname, icon_url=boticon)
                             embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                             await textdrmsg.edit(embed=embed)
-                    else:
-                        await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                            msglog(message, '[문자감지: 문자 감지 완료]')
+                else:
+                    await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                    msglog(message, '[문자감지: 파일 없음]')
 
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
@@ -1337,7 +1402,7 @@ async def on_message(message):
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
-                        msglog(message, f'[EXEC] {message.content[len(prefix)+7:]} --> {exout}')
+                        msglog(message, f'[EXEC] {message.content[len(prefix)+7:]}')
                     elif message.content.startswith(prefix + '//eval'):
                         try:
                             evout = eval(message.content[len(prefix)+7:])
@@ -1349,7 +1414,7 @@ async def on_message(message):
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
-                        msglog(message, f'[EVAL] {message.content[len(prefix)+7:]} --> {evout}')
+                        msglog(message, f'[EVAL] {message.content[len(prefix)+7:]}')
                     elif message.content.startswith(prefix + '//await'):
                         try:
                             awout = await eval(message.content[len(prefix)+8:])
@@ -1361,7 +1426,7 @@ async def on_message(message):
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         await message.channel.send(embed=embed)
-                        msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]} --> {awout}')
+                        msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
                     elif message.content == prefix + '//restart --db':
                         sshcmd('sudo systemctl restart mysql')
                         await message.channel.send('DONE')
