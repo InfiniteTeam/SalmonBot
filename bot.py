@@ -1384,82 +1384,83 @@ async def on_message(message):
                     msglog(message, '[문자감지: 파일 없음]')
 
             elif message.content.startswith(prefix + '//'):
-                if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
-                    if message.content == prefix + '//i t':
-                        config['inspection'] = True
-                        await message.channel.send('관리자 외 사용제한 켜짐.')
-                    elif message.content == prefix + '//i f':
-                        config['inspection'] = False
-                        await message.channel.send('관리자 외 사용제한 꺼짐.')
-                    elif message.content.startswith(prefix + '//exec'):
-                        try:
-                            exout = exec(message.content[len(prefix)+7:])
-                        except Exception as ex:
-                            execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
-                        else:
-                            execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{exout}```\n✅ SUCCESS'
-                        embed=discord.Embed(title='**💬 EXEC**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=execout)
-                        embed.set_author(name=botname, icon_url=boticon)
-                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        await message.channel.send(embed=embed)
-                        msglog(message, f'[EXEC] {message.content[len(prefix)+7:]}')
-                    elif message.content.startswith(prefix + '//eval'):
-                        try:
-                            evout = eval(message.content[len(prefix)+7:])
-                        except Exception as ex:
-                            evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
-                        else:
-                            evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{evout}```\n✅ SUCCESS'
-                        embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
-                        embed.set_author(name=botname, icon_url=boticon)
-                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        await message.channel.send(embed=embed)
-                        msglog(message, f'[EVAL] {message.content[len(prefix)+7:]}')
-                    elif message.content.startswith(prefix + '//await'):
-                        try:
-                            awout = await eval(message.content[len(prefix)+8:])
-                        except Exception as ex:
-                            awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
-                        else:
-                            awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n📤OUTPUT: ```python\n{awout}```\n✅ SUCCESS'
-                        embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=awaitout)
-                        embed.set_author(name=botname, icon_url=boticon)
-                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        await message.channel.send(embed=embed)
-                        msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
-                    elif message.content == prefix + '//restart --db':
-                        sshcmd('sudo systemctl restart mysql')
-                        await message.channel.send('DONE')
-                    elif message.content == prefix + '//restart --dbsv':
-                        sshcmd('sudo reboot')
-                        await message.channel.send('REBOOTING. Please restart the bot script')
-                    elif message.content.startswith(prefix + '//noti '):
-                        cmdlen = 8
-                        print(cur.execute('select * from serverdata where noticechannel is not NULL'))
-                        servers = cur.fetchall()
-                        await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
-                        for notichannel in servers:
-                            notiguild = client.get_guild(notichannel['id'])
-                            if notiguild != None:
-                                notiguildchannel = notiguild.get_channel(notichannel['noticechannel'])
-                                if notiguildchannel.permissions_for(notiguild.get_member(client.user.id)).send_messages:
-                                    await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
-                        await message.channel.send('공지 전송 완료.')
-                    elif message.content == prefix + '//error':
-                        raise Exception('TEST')
-                    elif message.content.startswith(prefix + '//logfile '):
-                        cmdlen = 11
-                        async with message.channel.typing():
-                            if message.content[11:] == 'salmon':
-                                with open('./logs/general/salmon.log', 'rb') as logfile:
-                                    dfile = discord.File(fp=logfile, filename='salmon.log')
-                            elif message.content[11:] == 'ping':
-                                with open('./logs/ping/ping.log', 'rb') as logfile:
-                                    dfile = discord.File(fp=logfile, filename='ping.log')
-                            elif message.content[11:] == 'error':
-                                with open('./logs/general/error.log', 'rb') as logfile:
-                                    dfile = discord.File(fp=logfile, filename='error.log')
-                            await message.channel.send(file=dfile)
+                if cur.execute('select * from serverdata where id=%s and master=%s', (message.guild.id, 1)) != 0:
+                    if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
+                        if message.content == prefix + '//i t':
+                            config['inspection'] = True
+                            await message.channel.send('관리자 외 사용제한 켜짐.')
+                        elif message.content == prefix + '//i f':
+                            config['inspection'] = False
+                            await message.channel.send('관리자 외 사용제한 꺼짐.')
+                        elif message.content.startswith(prefix + '//exec'):
+                            try:
+                                exout = exec(message.content[len(prefix)+7:])
+                            except Exception as ex:
+                                execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
+                            else:
+                                execout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{exout}```\n✅ SUCCESS'
+                            embed=discord.Embed(title='**💬 EXEC**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=execout)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await message.channel.send(embed=embed)
+                            msglog(message, f'[EXEC] {message.content[len(prefix)+7:]}')
+                        elif message.content.startswith(prefix + '//eval'):
+                            try:
+                                evout = eval(message.content[len(prefix)+7:])
+                            except Exception as ex:
+                                evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
+                            else:
+                                evalout = f'📥INPUT: ```python\n{message.content[len(prefix)+7:]}```\n📤OUTPUT: ```python\n{evout}```\n✅ SUCCESS'
+                            embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await message.channel.send(embed=embed)
+                            msglog(message, f'[EVAL] {message.content[len(prefix)+7:]}')
+                        elif message.content.startswith(prefix + '//await'):
+                            try:
+                                awout = await eval(message.content[len(prefix)+8:])
+                            except Exception as ex:
+                                awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
+                            else:
+                                awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n📤OUTPUT: ```python\n{awout}```\n✅ SUCCESS'
+                            embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=awaitout)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            await message.channel.send(embed=embed)
+                            msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
+                        elif message.content == prefix + '//restart --db':
+                            sshcmd('sudo systemctl restart mysql')
+                            await message.channel.send('DONE')
+                        elif message.content == prefix + '//restart --dbsv':
+                            sshcmd('sudo reboot')
+                            await message.channel.send('REBOOTING. Please restart the bot script')
+                        elif message.content.startswith(prefix + '//noti '):
+                            cmdlen = 8
+                            print(cur.execute('select * from serverdata where noticechannel is not NULL'))
+                            servers = cur.fetchall()
+                            await message.channel.send(f'{len(servers)}개의 서버에 공지를 보냅니다.')
+                            for notichannel in servers:
+                                notiguild = client.get_guild(notichannel['id'])
+                                if notiguild != None:
+                                    notiguildchannel = notiguild.get_channel(notichannel['noticechannel'])
+                                    if notiguildchannel.permissions_for(notiguild.get_member(client.user.id)).send_messages:
+                                        await client.get_guild(notichannel['id']).get_channel(notichannel['noticechannel']).send(message.content[8:])
+                            await message.channel.send('공지 전송 완료.')
+                        elif message.content == prefix + '//error':
+                            raise Exception('TEST')
+                        elif message.content.startswith(prefix + '//logfile '):
+                            cmdlen = 11
+                            async with message.channel.typing():
+                                if message.content[11:] == 'salmon':
+                                    with open('./logs/general/salmon.log', 'rb') as logfile:
+                                        dfile = discord.File(fp=logfile, filename='salmon.log')
+                                elif message.content[11:] == 'ping':
+                                    with open('./logs/ping/ping.log', 'rb') as logfile:
+                                        dfile = discord.File(fp=logfile, filename='ping.log')
+                                elif message.content[11:] == 'error':
+                                    with open('./logs/general/error.log', 'rb') as logfile:
+                                        dfile = discord.File(fp=logfile, filename='error.log')
+                                await message.channel.send(file=dfile)
 
             elif message.content[len(prefix)] == '%': pass
             else: await message.channel.send(embed=notexists())
@@ -1500,4 +1501,10 @@ def notexists():
     msglog(globalmsg, '[존재하지 않는 명령어]')
     return embed
 
-client.run(token)
+while True:
+    try:
+        client.run(token)
+    except:
+        clientexcinfo = sys.exc_info()
+        clienterrstr = f'{"".join(traceback.format_tb(clientexcinfo[2]))}{clientexcinfo[0].__name__}: {clientexcinfo[1]}'
+        errlogger.error(clienterrstr + '\n=========================')
