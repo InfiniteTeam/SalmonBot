@@ -165,7 +165,8 @@ async def secloop():
         elif ping > 400 and ping <= 550: pinglevel = '🔴 나쁨'
         elif ping > 550: pinglevel = '⚫ 매우나쁨'
         pinglogger.info(f'{ping}ms')
-        pinglogger.info(f'{db.open}')
+        pinglogger.info(f'DB_OPEN: {db.open}')
+        pinglogger.info(f'CLIENT_CONNECTED: {not client.is_closed()}')
         dbip = config['dbIP']
         if config['localRun'] == True:
             dbping = '0'
