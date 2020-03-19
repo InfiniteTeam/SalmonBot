@@ -16,6 +16,7 @@ import os
 import sys
 import urllib.request
 import traceback
+import websockets
 from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi
 
 # =============== Local Data Load ===============
@@ -186,7 +187,7 @@ async def secloop():
     except BaseException:
         traceback.print_exc()
 
-@tasks.loop(seconds=1)
+@tasks.loop(seconds=2)
 async def dbrecon():
     try:
         db.ping(reconnect=False)
@@ -1501,10 +1502,4 @@ def notexists():
     msglog(globalmsg, '[존재하지 않는 명령어]')
     return embed
 
-while True:
-    try:
-        client.run(token)
-    except:
-        clientexcinfo = sys.exc_info()
-        clienterrstr = f'{"".join(traceback.format_tb(clientexcinfo[2]))}{clientexcinfo[0].__name__}: {clientexcinfo[1]}'
-        errlogger.error(clienterrstr + '\n=========================')
+client.run(token)
