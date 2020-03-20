@@ -1,5 +1,6 @@
 import discord
 import urlextract
+import math
 
 def accessibleChannelsMention(guild, clientid):
     alltext = []
@@ -25,3 +26,4 @@ def urlExtract(text):
     extr = urlextract.URLExtract()
     urls = extr.find_urls(text=text)
     return urls
+

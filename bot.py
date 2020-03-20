@@ -17,7 +17,7 @@ import sys
 import urllib.request
 import traceback
 import websockets
-from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi
+from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi, mapgridcvt
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -569,6 +569,7 @@ async def on_message(message):
                             await message.channel.send(embed=embed)
                             msglog(message, '[공지채널: 설정됨]')
 
+            # ==================== NAVER API ====================
             elif message.content.startswith(prefix + '네이버검색'):
                 if type(serverid_or_type) == int:
                     def navercheck(reaction, user):
@@ -640,7 +641,7 @@ async def on_message(message):
                                                 await naverblogresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverblogresult, allpage=naverblogallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -699,7 +700,7 @@ async def on_message(message):
                                                 await navernewsresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=navernewsresult, allpage=navernewsallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -758,7 +759,7 @@ async def on_message(message):
                                                 await naverbookresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=10, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverbookresult, allpage=naverbookallpage, perpage=10, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -817,7 +818,7 @@ async def on_message(message):
                                                 await naverencycresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=10, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverencycresult, allpage=naverencycallpage, perpage=10, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -876,7 +877,7 @@ async def on_message(message):
                                                 await navermovieresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=10, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=navermovieresult, allpage=navermovieallpage, perpage=10, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -935,7 +936,7 @@ async def on_message(message):
                                                 await navercaferesult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navercaferesult, allpage=navercafeallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=navercaferesult, allpage=navercafeallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -994,7 +995,7 @@ async def on_message(message):
                                                 await naverkinresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverkinresult, allpage=naverkinallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverkinresult, allpage=naverkinallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -1053,7 +1054,7 @@ async def on_message(message):
                                                 await naverwebkrresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverwebkrresult, allpage=naverwebkrallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverwebkrresult, allpage=naverwebkrallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -1112,7 +1113,7 @@ async def on_message(message):
                                                 await naverimageresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverimageresult, allpage=naverimageallpage, perpage=10, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverimageresult, allpage=naverimageallpage, perpage=10, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -1171,7 +1172,7 @@ async def on_message(message):
                                                 await navershopresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=navershopresult, allpage=navershopallpage, perpage=10, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=navershopresult, allpage=navershopallpage, perpage=10, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -1230,7 +1231,7 @@ async def on_message(message):
                                                 await naverdocresult.clear_reactions()
                                                 break
                                             else:
-                                                pagect = pagecontrol.PageControl(reaction=reaction, user=user, msg=naverdocresult, allpage=naverdocallpage, perpage=4, nowpage=page)
+                                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=naverdocresult, allpage=naverdocallpage, perpage=4, nowpage=page)
                                                 await pagect[1]
                                                 if type(pagect[0]) == int:
                                                     if page != pagect[0]:
@@ -1307,6 +1308,7 @@ async def on_message(message):
                     await message.channel.send('언어를 감지할 텍스트를 입력해 주세요.')
                     msglog(message, "[네이버언어감지: 텍스트없음]")
 
+            # ==================== KAKAO API ====================
             elif message.content.startswith(prefix + '이미지태그'):
                 msgurls = salmoncmds.urlExtract(message.content)
                 if len(message.attachments):
@@ -1385,6 +1387,63 @@ async def on_message(message):
                     await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
                     msglog(message, '[문자감지: 파일 없음]')
 
+            elif message.content.startswith(prefix + '우편번호검색'):
+                cmdlen = 6
+                query = message.content[len(prefix)+1+cmdlen:]
+                if query:
+                    page = 1
+                    size = 4
+                    addresses = kakaoapi.search_address(kakaoapi_secret, query, page, size)
+                    print(addresses)
+                    total = addresses['meta']['total_count']
+                    if total > 0:
+                        if total%size == 0:
+                            allpage = total//size
+                        else:
+                            allpage = total//size + 1
+
+                        embed = kakaoapi.search_addressEmbed(addresses, query, page, size, color['kakaoapi'])
+                        if embed != None:
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            addressmsg = await message.channel.send(embed=embed)
+                            for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await addressmsg.add_reaction(rct)
+                            msglog(message, '[우편번호검색]')
+                            while True:
+                                def addresscheck(reaction, user):
+                                    return user == message.author and addressmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=addresscheck)
+                                except asyncio.TimeoutError:
+                                    await addressmsg.clear_reactions()
+                                    break
+                                else:
+                                    pagect = pagecontrol.kakaoPageControl(reaction=reaction, user=user, msg=addressmsg, allpage=allpage, perpage=4, nowpage=page)
+                                    await pagect[1]
+                                    if type(pagect[0]) == int:
+                                        msglog(message, '[우편번호검색: 반응 추가함]')
+                                        if page != pagect[0]:
+                                            page = pagect[0]
+                                            addresses = kakaoapi.search_address(kakaoapi_secret, query, page, size)
+                                            embed = kakaoapi.search_addressEmbed(addresses, query, page, size, color['kakaoapi'])
+                                            embed.set_author(name=botname, icon_url=boticon)
+                                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                            await addressmsg.edit(embed=embed)
+                                    elif pagect[0] == None: break
+                            msglog(message, '[우편번호검색: 정지]')
+                        else:
+                            await message.channel.send('검색된 주소가 없습니다!')
+                            msglog(message, '[우편번호검색: 주소없음]')
+                    else:
+                        await message.channel.send('검색된 주소가 없습니다!')
+                        msglog(message, '[우편번호검색: 주소없음]')
+                    
+                else:
+                    await message.channel.send('주소를 검색할 검색어를 입력해주세요! (예: 신당동, 호산로)')
+                    msglog(message, '[우편번호검색: 주소입력]')
+
+            # ==================== MASTER ONLY ====================
             elif message.content.startswith(prefix + '//'):
                 if cur.execute('select * from serverdata where id=%s and master=%s', (message.guild.id, 1)) != 0:
                     if cur.execute('select * from userdata where id=%s and type=%s', (message.author.id, 'Master')) == 1:
