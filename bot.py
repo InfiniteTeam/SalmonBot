@@ -17,13 +17,15 @@ import sys
 import urllib.request
 import traceback
 import websockets
-from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi, mapgridcvt
+from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi, mapgridcvt, datagokr
 
 # =============== Local Data Load ===============
 with open('./data/config.json', encoding='utf-8') as config_file:
     config = json.load(config_file)
 with open('./data/version.json', encoding='utf-8') as version_file:
     version = json.load(version_file)
+with open('./data/color.json', encoding='utf-8') as color_file:
+    color = json.load(color_file)
 
 # IMPORTant data
 if platform.system() == 'Windows':
@@ -67,7 +69,6 @@ activity = config['activity']
 status = config['status']
 boticon = config['botIconUrl']
 thumbnail = config['thumbnailUrl']
-color = config['color']
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
 
@@ -106,9 +107,12 @@ cur = db.cursor(pymysql.cursors.DictCursor)
 naverapi_id = openapi['naver']['clientID']
 naverapi_secret = openapi['naver']['clientSec']
 
-#================ Kakao Open API ===============
+# ================ Kakao Open API ===============
 kakaoapi_id = openapi['kakao']['clientID']
 kakaoapi_secret = openapi['kakao']['clientSec']
+
+# ================ data.go.kr Open API ===============
+datagokr_key = openapi['data.go.kr']['ServiceKey']
 
 # =============== Logging ===============
 logger = logging.getLogger('salmonbot')
@@ -1305,7 +1309,8 @@ async def on_message(message):
                             shorturlmsg = await message.channel.send(embed=detectlangsembed)
                             msglog(message, f"[네이버언어감지: {detectlangsresult['langCode']}]")
                 else:
-                    await message.channel.send('언어를 감지할 텍스트를 입력해 주세요.')
+                    miniembed = discord.Embed(description='**❌ 언어를 감지할 텍스트를 입력해주세요!**', color=color['error'])
+                    await message.channel.send(embed=miniembed)
                     msglog(message, "[네이버언어감지: 텍스트없음]")
 
             # ==================== KAKAO API ====================
@@ -1318,7 +1323,8 @@ async def on_message(message):
                     multitags = kakaoapi.multitag(kakaoapi_secret, image_url=msgurls[0])
                 else:
                     multitags = False
-                    await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                    miniembed = discord.Embed(description='**❌ 명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다!**', color=color['error'])
+                    await message.channel.send(embed=miniembed)
                     msglog(message, '[이미지태그: 파일 없음]')
                 if multitags != False:
                     if multitags:
@@ -1384,64 +1390,69 @@ async def on_message(message):
                             await textdrmsg.edit(embed=embed)
                             msglog(message, '[문자감지: 문자 감지 완료]')
                 else:
-                    await message.channel.send('명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다.')
+                    miniembed = discord.Embed(description='**❌ 명령어에 사진 파일 또는 사진 웹주소(URL)가 포함되어 있지 않습니다!**', color=color['error'])
+                    await message.channel.send(embed=miniembed)
                     msglog(message, '[문자감지: 파일 없음]')
 
-            elif message.content.startswith(prefix + '우편번호검색'):
-                cmdlen = 6
+            elif message.content.startswith(prefix + '주소검색'):
+                cmdlen = 4
                 query = message.content[len(prefix)+1+cmdlen:]
                 if query:
-                    page = 1
-                    size = 4
-                    addresses = kakaoapi.search_address(kakaoapi_secret, query, page, size)
-                    print(addresses)
-                    total = addresses['meta']['total_count']
-                    if total > 0:
-                        if total%size == 0:
-                            allpage = total//size
+                    page = 0
+                    perpage = 5
+                    addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
+                    header = datagokr.searchAddressesHeader(addresses)
+                    total = header['totalCount']
+                    if total == None:
+                        miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                        await message.channel.send(embed=miniembed)
+                        msglog(message, '[주소검색: 결과없음]')
+                    elif total > 0:
+                        if total%perpage == 0:
+                            allpage = total//perpage
                         else:
-                            allpage = total//size + 1
-
-                        embed = kakaoapi.search_addressEmbed(addresses, query, page, size, color['kakaoapi'])
-                        if embed != None:
-                            embed.set_author(name=botname, icon_url=boticon)
-                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                            addressmsg = await message.channel.send(embed=embed)
-                            for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                await addressmsg.add_reaction(rct)
-                            msglog(message, '[우편번호검색]')
-                            while True:
-                                def addresscheck(reaction, user):
-                                    return user == message.author and addressmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                                try:
-                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=addresscheck)
-                                except asyncio.TimeoutError:
-                                    await addressmsg.clear_reactions()
-                                    break
-                                else:
-                                    pagect = pagecontrol.kakaoPageControl(reaction=reaction, user=user, msg=addressmsg, allpage=allpage, perpage=4, nowpage=page)
-                                    await pagect[1]
-                                    if type(pagect[0]) == int:
-                                        msglog(message, '[우편번호검색: 반응 추가함]')
-                                        if page != pagect[0]:
-                                            page = pagect[0]
-                                            addresses = kakaoapi.search_address(kakaoapi_secret, query, page, size)
-                                            embed = kakaoapi.search_addressEmbed(addresses, query, page, size, color['kakaoapi'])
-                                            embed.set_author(name=botname, icon_url=boticon)
-                                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                            await addressmsg.edit(embed=embed)
-                                    elif pagect[0] == None: break
-                            msglog(message, '[우편번호검색: 정지]')
-                        else:
-                            await message.channel.send('검색된 주소가 없습니다!')
-                            msglog(message, '[우편번호검색: 주소없음]')
+                            allpage = total//perpage + 1
+                        embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                        embed.set_author(name=botname, icon_url=boticon)
+                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                        addressmsg = await message.channel.send(embed=embed)
+                        for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                            await addressmsg.add_reaction(rct)
+                        msglog(message, '[주소검색: 주소검색]')
+                        while True:
+                            def addresscheck(reaction, user):
+                                return user == message.author and addressmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            try:
+                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=addresscheck)
+                            except asyncio.TimeoutError:
+                                await addressmsg.clear_reactions()
+                                break
+                            else:
+                                if total < perpage: allpage = 0
+                                else: 
+                                    if total > 50: allpage = (50-1)//perpage
+                                    else: allpage = (total-1)//perpage
+                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=addressmsg, allpage=allpage, perpage=5, nowpage=page)
+                                await pagect[1]
+                                if type(pagect[0]) == int:
+                                    msglog(message, '[주소검색: 반응 추가함]')
+                                    if page != pagect[0]:
+                                        page = pagect[0]
+                                        embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                                        embed.set_author(name=botname, icon_url=boticon)
+                                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                        await addressmsg.edit(embed=embed)
+                                elif pagect[0] == None: break
+                        msglog(message, '[주소검색: 정지]')
+                        
                     else:
-                        await message.channel.send('검색된 주소가 없습니다!')
-                        msglog(message, '[우편번호검색: 주소없음]')
-                    
+                        miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                        await message.channel.send(embed=miniembed)
+                        msglog(message, '[주소검색: 결과없음]')
                 else:
-                    await message.channel.send('주소를 검색할 검색어를 입력해주세요! (예: 신당동, 호산로)')
-                    msglog(message, '[우편번호검색: 주소입력]')
+                    miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
+                    await message.channel.send(embed=miniembed)
+                    msglog(message, '[주소검색: 주소입력]')
 
             # ==================== MASTER ONLY ====================
             elif message.content.startswith(prefix + '//'):
@@ -1484,10 +1495,13 @@ async def on_message(message):
                                 awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n💥EXCEPT: ```python\n{ex}```\n❌ ERROR'
                             else:
                                 awaitout = f'📥INPUT: ```python\n{message.content[len(prefix)+8:]}```\n📤OUTPUT: ```python\n{awout}```\n✅ SUCCESS'
-                            embed=discord.Embed(title='**💬 EVAL**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=awaitout)
+                            embed=discord.Embed(title='**💬 AWAIT**', color=color['salmon'], timestamp=datetime.datetime.utcnow(), description=awaitout)
                             embed.set_author(name=botname, icon_url=boticon)
                             embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                             await message.channel.send(embed=embed)
+                            msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
+                        elif message.content.startswith(prefix + '//hawait'):
+                            awout = await eval(message.content[len(prefix)+8:])
                             msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
                         elif message.content == prefix + '//restart --db':
                             sshcmd('sudo systemctl restart mysql')
