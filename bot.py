@@ -464,8 +464,10 @@ async def on_message(message):
                         embed=discord.Embed(title='🔐 연어봇 권한 - 채널 목록', description='현재 서버에서 연어봇이 접근(읽기/보내기/듣기/말하기) 할 수 있는 채널들의 목록입니다.', color=color['info'], timestamp=datetime.datetime.utcnow())
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        embed.add_field(name='채팅 채널', value='\n'.join(permchs[0]))
-                        embed.add_field(name='음성 채널', value='\n'.join(permchs[1]))
+                        if len(permchs[0]) > 0:
+                            embed.add_field(name='채팅 채널', value='\n'.join(permchs[0]))
+                        if len(permchs[1]) > 0:
+                            embed.add_field(name='음성 채널', value='\n'.join(permchs[1]))
                         await message.channel.send(embed=embed)
                         msglog(message, '[봇권한: 채널목록]')
 
