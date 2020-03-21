@@ -12,6 +12,7 @@ To use my code, follow this [Licence](LICENSE)
 |    NAME    |    DEVELOP VERSION    |
 |------------|-----------------------|
 | Python3    | 3.7.6                 |
+| MariaDB    | 10.0.28-MariaDB       |
 
 |   PAKAGE   |  VERSION  |
 |----------- |-----------|
@@ -29,4 +30,8 @@ To use my code, follow this [Licence](LICENSE)
 ## OpenAPIs
 <a href="http://developers.naver.com" target="_blank">
     <img src="./openapis/naveropenapi.png" alt="NAVER Open API" width="30%" height="30%"/>
+</a>
+<br>
+<a href="https://developers.kakao.com" target="_blank">
+    <img src="./openapis/kakaodevelopers.png" alt="Kakao Developers" width="20%" height="20%"/>
 </a>
