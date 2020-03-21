@@ -1402,65 +1402,127 @@ async def on_message(message):
                     await message.channel.send(embed=miniembed)
                     msglog(message, '[문자감지: 파일 없음]')
 
+            # ==================== data.go.kr ====================
+
             elif message.content.startswith(prefix + '주소검색'):
                 cmdlen = 4
                 query = message.content[len(prefix)+1+cmdlen:]
                 if query:
+                    async with message.channel.typing():
+                        page = 0
+                        perpage = 5
+                        addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
+                        header = datagokr.searchAddressesHeader(addresses)
+                        total = header['totalCount']
+                        if total == None:
+                            miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                            await message.channel.send(embed=miniembed)
+                            msglog(message, '[주소검색: 결과없음]')
+                        elif total > 0:
+                            if total%perpage == 0:
+                                allpage = total//perpage
+                            else:
+                                allpage = total//perpage + 1
+                            embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            addressmsg = await message.channel.send(embed=embed)
+                            for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await addressmsg.add_reaction(rct)
+                            msglog(message, '[주소검색: 주소검색]')
+                            while True:
+                                def addresscheck(reaction, user):
+                                    return user == message.author and addressmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=addresscheck)
+                                except asyncio.TimeoutError:
+                                    await addressmsg.clear_reactions()
+                                    break
+                                else:
+                                    if total < perpage: allpage = 0
+                                    else: 
+                                        if total > 50: allpage = (50-1)//perpage
+                                        else: allpage = (total-1)//perpage
+                                    pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=addressmsg, allpage=allpage, perpage=5, nowpage=page)
+                                    await pagect[1]
+                                    if type(pagect[0]) == int:
+                                        msglog(message, '[주소검색: 반응 추가함]')
+                                        if page != pagect[0]:
+                                            page = pagect[0]
+                                            embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                                            embed.set_author(name=botname, icon_url=boticon)
+                                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                            await addressmsg.edit(embed=embed)
+                                    elif pagect[0] == None: break
+                            msglog(message, '[주소검색: 정지]')
+                        
+                        else:
+                            miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                            await message.channel.send(embed=miniembed)
+                            msglog(message, '[주소검색: 결과없음]')
+                else:
+                    miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
+                    await message.channel.send(embed=miniembed)
+                    msglog(message, '[주소검색: 주소입력]')
+
+            elif message.content.startswith(prefix + '마스크'):
+                cmdlen = 3
+                addr = message.content[len(prefix)+1+cmdlen:]
+                notexistsmsg = '''**! 검색 양식을 확인해주세요 !**\n1. 반드시 `~~도` 또는 `~~광역시(특별시)`를 붙여야 합니다.\n2. 그 다음에는 반드시 `구/동/군/면/읍` 등을 입력하세요!\n(예: `대구광역시 달서구 파호동`, `경상북도 군위군 군위읍`)'''
+                if addr:
                     page = 0
-                    perpage = 5
-                    addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
-                    header = datagokr.searchAddressesHeader(addresses)
-                    total = header['totalCount']
+                    perpage = 4
+                    masks = datagokr.corona19Masks_byaddr(addr)
+                    total = masks['count']
                     if total == None:
-                        miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                        miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', description=notexistsmsg, color=color['error'])
                         await message.channel.send(embed=miniembed)
-                        msglog(message, '[주소검색: 결과없음]')
+                        msglog(message, '[마스크: 결과없음]')
                     elif total > 0:
                         if total%perpage == 0:
                             allpage = total//perpage
                         else:
                             allpage = total//perpage + 1
-                        embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                        embed = datagokr.corona19Masks_Embed(masks, page, perpage)
                         embed.set_author(name=botname, icon_url=boticon)
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        addressmsg = await message.channel.send(embed=embed)
+                        maskmsg = await message.channel.send(embed=embed)
                         for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
-                            await addressmsg.add_reaction(rct)
-                        msglog(message, '[주소검색: 주소검색]')
+                            await maskmsg.add_reaction(rct)
+                        msglog(message, '[마스크: 마스크]')
                         while True:
-                            def addresscheck(reaction, user):
-                                return user == message.author and addressmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                            def maskcheck(reaction, user):
+                                return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
                             try:
-                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=addresscheck)
+                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
                             except asyncio.TimeoutError:
-                                await addressmsg.clear_reactions()
+                                await maskmsg.clear_reactions()
                                 break
                             else:
                                 if total < perpage: allpage = 0
                                 else: 
-                                    if total > 50: allpage = (50-1)//perpage
-                                    else: allpage = (total-1)//perpage
-                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=addressmsg, allpage=allpage, perpage=5, nowpage=page)
+                                    allpage = (total-1)//perpage
+                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=allpage, perpage=7, nowpage=page)
                                 await pagect[1]
                                 if type(pagect[0]) == int:
-                                    msglog(message, '[주소검색: 반응 추가함]')
+                                    msglog(message, '[마스크: 반응 추가함]')
                                     if page != pagect[0]:
                                         page = pagect[0]
-                                        embed = datagokr.searchAddressesEmbed(addresses, query, page, perpage, color['datagokr'])
+                                        embed = datagokr.corona19Masks_Embed(masks, page, perpage)
                                         embed.set_author(name=botname, icon_url=boticon)
                                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                        await addressmsg.edit(embed=embed)
+                                        await maskmsg.edit(embed=embed)
                                 elif pagect[0] == None: break
-                        msglog(message, '[주소검색: 정지]')
-                        
+                        msglog(message, '[마스크: 정지]')
+                    
                     else:
-                        miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
+                        miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', description=notexistsmsg, color=color['error'])
                         await message.channel.send(embed=miniembed)
-                        msglog(message, '[주소검색: 결과없음]')
+                        msglog(message, '[마스크: 결과없음]')
                 else:
-                    miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
+                    miniembed = discord.Embed(title='❌ 주변 판매처를 검색할 주소를 입력해주세요!', description=notexistsmsg, color=color['error'])
                     await message.channel.send(embed=miniembed)
-                    msglog(message, '[주소검색: 주소입력]')
+                    msglog(message, '[마스크: 주소입력]')
 
             # ==================== MASTER ONLY ====================
             elif message.content.startswith(prefix + '//'):

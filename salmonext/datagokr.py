@@ -62,3 +62,52 @@ def searchAddressesEmbed(xmlresults, query, page, perpage, color):
             break
     embed.add_field(name='ㅤ', value=resultinfoPanel(total, page, perpage, display=50), inline=False)
     return embed
+
+def corona19Masks_byaddr(address):
+    data = {'address': address}
+    resp = requests.get('https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByAddr/json', data=data)
+    resp.raise_for_status()
+    results = resp.json()
+    return results
+
+def corona19Masks_Embed(jsonresults, page, perpage, storesby='address', color=0x3DB7CC):
+    results = jsonresults
+    total = results['count']
+    if storesby == 'address':
+        embed = discord.Embed(title='🧪 공적 마스크 판매처 검색 - 주소 기준', color=color)
+    for pgindex in range(perpage):
+        if page*perpage+pgindex < total:
+            one = results['stores'][page*perpage+pgindex]
+            addr = one['addr']
+            code = one['code']
+            created_at = one['created_at']
+            name = one['name']
+            remain_stat = one['remain_stat']
+            if remain_stat == 'plenty':
+                remain_cir = '🟢'
+                remain_str = '충분히 많음(100개 이상)'
+            elif remain_stat == 'some':
+                remain_cir = '🟡'
+                remain_str = '약간 (30~99개)'
+            elif remain_stat == 'few':
+                remain_cir = '🔴'
+                remain_str = '아주 적음 (2~29개)'
+            elif remain_stat == 'empty':
+                remain_cir = '⚪'
+                remain_str = '없음 (1개 이하)'
+            elif remain_stat == 'break':
+                remain_cir = '⛔'
+                remain_str = '판매 중지'
+            stock_at = one['stock_at']
+            storetype = one['type']
+            if storetype == '01':
+                storetype_str = '🏥 약국'
+            elif storetype == '02':
+                storetype_str = '📫 우체국'
+            elif storetype == '03':
+                storetype_str = '🍀 농협 하나로마트'
+            embed.add_field(name='ㅤ', value=f'{remain_cir}  **{name}** `({addr})`\n🔹 재고: **{remain_str}**\n🔹 판매처 유형: {storetype_str}\n🔹 기준시간: `{created_at}`\n🔹 이 판매분이 입고된 시간: `{stock_at}`', inline=False)
+        else:
+            break
+    embed.add_field(name='ㅤ', value=resultinfoPanel(total, page, perpage, display=total), inline=False)
+    return embed
