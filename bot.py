@@ -466,8 +466,12 @@ async def on_message(message):
                         embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
                         if len(permchs[0]) > 0:
                             embed.add_field(name='채팅 채널', value='\n'.join(permchs[0]))
+                        else:
+                            embed.add_field(name='채팅 채널', value='접근할 수 있는 채널이 없어요.')
                         if len(permchs[1]) > 0:
                             embed.add_field(name='음성 채널', value='\n'.join(permchs[1]))
+                        else:
+                            embed.add_field(name='음성 채널', value='접근할 수 있는 채널이 없어요.')
                         await message.channel.send(embed=embed)
                         msglog(message, '[봇권한: 채널목록]')
 

@@ -19,7 +19,7 @@ def accessibleChannelsMention(guild, clientid):
     for voicech in allvoice:
         voicechperms = voicech.permissions_for(guild.get_member(clientid))
         if not (False in [voicechperms.connect, voicechperms.speak]):
-            okvoicechs.append(voicech.name)
+            okvoicechs.append(f'[{voicech.name}](https://discordapp.com/channels/{guild.id}/{voicech.id})')
     return oktextchs, okvoicechs
 
 def urlExtract(text):
