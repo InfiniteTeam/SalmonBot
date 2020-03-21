@@ -262,9 +262,11 @@ async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
     excinfo = sys.exc_info()
     errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
-    errlogger.error(errstr + '\n=========================')
     if not excinfo[0] in ignoreexc:
         await args[0].channel.send(embed=errormsg(errstr, args[0]))
+        if cur.execute('select * from userdata where id=%s and type=%s', (args[0].author.id, 'Master')) == 0:
+            errlogger.error(errstr + '\n=========================')
+            
 
 @client.event
 async def on_message(message):
