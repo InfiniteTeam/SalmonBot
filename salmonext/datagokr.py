@@ -82,30 +82,42 @@ def corona19Masks_Embed(jsonresults, page, perpage, storesby='address', color=0x
             code = one['code']
             created_at = one['created_at']
             name = one['name']
-            remain_stat = one['remain_stat']
-            if remain_stat == 'plenty':
-                remain_cir = '🟢'
-                remain_str = '충분히 많음(100개 이상)'
-            elif remain_stat == 'some':
-                remain_cir = '🟡'
-                remain_str = '약간 (30~99개)'
-            elif remain_stat == 'few':
-                remain_cir = '🔴'
-                remain_str = '아주 적음 (2~29개)'
-            elif remain_stat == 'empty':
-                remain_cir = '⚪'
-                remain_str = '없음 (1개 이하)'
-            elif remain_stat == 'break':
-                remain_cir = '⛔'
-                remain_str = '판매 중지'
-            stock_at = one['stock_at']
-            storetype = one['type']
-            if storetype == '01':
-                storetype_str = '🏥 약국'
-            elif storetype == '02':
-                storetype_str = '📫 우체국'
-            elif storetype == '03':
-                storetype_str = '🍀 농협 하나로마트'
+            if 'remain_stat' in one:
+                remain_stat = one['remain_stat']
+                if remain_stat == 'plenty':
+                    remain_cir = '🟢'
+                    remain_str = '충분히 많음(100개 이상)'
+                elif remain_stat == 'some':
+                    remain_cir = '🟡'
+                    remain_str = '약간 (30~99개)'
+                elif remain_stat == 'few':
+                    remain_cir = '🔴'
+                    remain_str = '아주 적음 (2~29개)'
+                elif remain_stat == 'empty':
+                    remain_cir = '⚪'
+                    remain_str = '없음 (1개 이하)'
+                elif remain_stat == 'break':
+                    remain_cir = '⛔'
+                    remain_str = '판매 중지'
+            else:
+                remain_cir = '❓'
+                remain_str = '알 수 없음'
+            if 'stock_at' in one:
+                stock_at = one['stock_at']
+            else:
+                stock_at = '(알 수 없음)'
+
+            if 'type' in one:
+                storetype = one['type']
+                if storetype == '01':
+                    storetype_str = '🏥 약국'
+                elif storetype == '02':
+                    storetype_str = '📫 우체국'
+                elif storetype == '03':
+                    storetype_str = '🍀 농협 하나로마트'
+            else:
+                storetype = '(알 수 없음)'
+            
             embed.add_field(name='ㅤ', value=f'{remain_cir}  **{name}** `({addr})`\n🔹 재고: **{remain_str}**\n🔹 판매처 유형: {storetype_str}\n🔹 기준시간: `{created_at}`\n🔹 이 판매분이 입고된 시간: `{stock_at}`', inline=False)
         else:
             break
