@@ -1490,7 +1490,6 @@ async def on_message(message):
                                 await message.channel.send(embed=miniembed)
                                 msglog(message, '[마스크: 결과없음]')
                             else:
-                                print(llmasks)
                                 lltotal = llmasks['count']
                                 if lltotal%llperpage == 0:
                                     llallpage = lltotal//llperpage
