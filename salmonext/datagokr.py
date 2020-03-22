@@ -77,11 +77,10 @@ def corona19Masks_bygeo(lat, lng):
     results = resp.json()
     return results
 
-def corona19Masks_Embed(jsonresults, page, perpage, storesby='address', color=0x3DB7CC):
+def corona19Masks_Embed(jsonresults, page, perpage, color=0x3DB7CC):
     results = jsonresults
     total = results['count']
-    if storesby == 'address':
-        embed = discord.Embed(title='🧪 공적 마스크 판매처 검색 - 주소 기준', color=color)
+    embed = discord.Embed(title='🧪 공적 마스크 판매처 검색', color=color)
     for pgindex in range(perpage):
         if page*perpage+pgindex < total:
             one = results['stores'][page*perpage+pgindex]
