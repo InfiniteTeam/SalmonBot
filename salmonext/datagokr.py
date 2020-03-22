@@ -82,12 +82,15 @@ def corona19Masks_Embed(jsonresults, page, perpage, color=0x3DB7CC):
     total = results['count']
     embed = discord.Embed(title='🧪 공적 마스크 판매처 검색', color=color)
     for pgindex in range(perpage):
+        print(page*perpage+pgindex)
         if page*perpage+pgindex < total:
             one = results['stores'][page*perpage+pgindex]
             addr = one['addr']
             code = one['code']
             created_at = one['created_at']
             name = one['name']
+            remain_cir = ''
+            remain_str = ''
             if 'remain_stat' in one:
                 remain_stat = one['remain_stat']
                 if remain_stat == 'plenty':
