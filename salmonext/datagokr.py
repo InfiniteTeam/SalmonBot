@@ -70,6 +70,13 @@ def corona19Masks_byaddr(address):
     results = resp.json()
     return results
 
+def corona19Masks_bygeo(lat, lng):
+    data = {'lat': lat, 'lng': lng}
+    resp = requests.get('https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json', data=data)
+    resp.raise_for_status()
+    results = resp.json()
+    return results
+
 def corona19Masks_Embed(jsonresults, page, perpage, storesby='address', color=0x3DB7CC):
     results = jsonresults
     total = results['count']

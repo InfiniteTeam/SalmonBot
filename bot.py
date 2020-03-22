@@ -1414,11 +1414,11 @@ async def on_message(message):
                         addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
                         header = datagokr.searchAddressesHeader(addresses)
                         total = header['totalCount']
-                        if total == None:
+                        if total == None or total == 0:
                             miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
                             await message.channel.send(embed=miniembed)
                             msglog(message, '[주소검색: 결과없음]')
-                        elif total > 0:
+                        else:
                             if total%perpage == 0:
                                 allpage = total//perpage
                             else:
@@ -1455,11 +1455,7 @@ async def on_message(message):
                                             await addressmsg.edit(embed=embed)
                                     elif pagect[0] == None: break
                             msglog(message, '[주소검색: 정지]')
-                        
-                        else:
-                            miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
-                            await message.channel.send(embed=miniembed)
-                            msglog(message, '[주소검색: 결과없음]')
+
                 else:
                     miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
                     await message.channel.send(embed=miniembed)
@@ -1474,11 +1470,53 @@ async def on_message(message):
                     perpage = 4
                     masks = datagokr.corona19Masks_byaddr(addr)
                     total = masks['count']
-                    if total == None:
-                        miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', description=notexistsmsg, color=color['error'])
-                        await message.channel.send(embed=miniembed)
-                        msglog(message, '[마스크: 결과없음]')
-                    elif total > 0:
+                    if total == None or total == 0:
+                        llsearch = kakaoapi.search_address(kakaoapi_secret, addr, 1, 1)
+                        lltotal = llsearch['meta']['total_count']
+                        if lltotal == None or lltotal == 0:
+                            miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', color=color['error'])
+                            await message.channel.send(embed=miniembed)
+                            msglog(message, '[마스크: 결과없음]')
+                        else:
+                            ll_lat = llsearch['documents'][0]['y']
+                            ll_lng = llsearch['documents'][0]['x']
+                            llmasks = datagokr.corona19Masks_bygeo(ll_lat, ll_lng)
+                            if total%perpage == 0:
+                                allpage = total//perpage
+                            else:
+                                allpage = total//perpage + 1
+                            embed = datagokr.corona19Masks_Embed(llmasks, page, perpage)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            maskmsg = await message.channel.send(embed=embed)
+                            for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await maskmsg.add_reaction(rct)
+                            msglog(message, '[마스크: 마스크]')
+                            while True:
+                                def maskcheck(reaction, user):
+                                    return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
+                                except asyncio.TimeoutError:
+                                    await maskmsg.clear_reactions()
+                                    break
+                                else:
+                                    if total < perpage: allpage = 0
+                                    else: 
+                                        allpage = (total-1)//perpage
+                                    pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=allpage, perpage=7, nowpage=page)
+                                    await pagect[1]
+                                    if type(pagect[0]) == int:
+                                        msglog(message, '[마스크: 반응 추가함]')
+                                        if page != pagect[0]:
+                                            page = pagect[0]
+                                            embed = datagokr.corona19Masks_Embed(llmasks, page, perpage)
+                                            embed.set_author(name=botname, icon_url=boticon)
+                                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                            await maskmsg.edit(embed=embed)
+                                    elif pagect[0] == None: break
+                            msglog(message, '[마스크: 정지]')
+                    else:
                         if total%perpage == 0:
                             allpage = total//perpage
                         else:
@@ -1514,11 +1552,6 @@ async def on_message(message):
                                         await maskmsg.edit(embed=embed)
                                 elif pagect[0] == None: break
                         msglog(message, '[마스크: 정지]')
-                    
-                    else:
-                        miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', description=notexistsmsg, color=color['error'])
-                        await message.channel.send(embed=miniembed)
-                        msglog(message, '[마스크: 결과없음]')
                 else:
                     miniembed = discord.Embed(title='❌ 주변 판매처를 검색할 주소를 입력해주세요!', description=notexistsmsg, color=color['error'])
                     await message.channel.send(embed=miniembed)
