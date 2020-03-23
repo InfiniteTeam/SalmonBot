@@ -1471,7 +1471,7 @@ async def on_message(message):
                     await message.channel.send(embed=onlyguild())
 
             elif message.content.startswith(prefix + '마스크'):
-                if serverid_or_type == int:
+                if type(serverid_or_type) == int:
                     cmdlen = 3
                     addr = message.content[len(prefix)+1+cmdlen:]
                     notexistsmsg = '''**! 검색 양식을 확인해주세요 !**\n1. 반드시 `~~도` 또는 `~~광역시(특별시)`를 붙여야 합니다.\n2. 그 다음에는 반드시 `구/동/군/면/읍` 등을 입력하세요!\n(예: `대구광역시 달서구 파호동`, `경상북도 군위군 군위읍`)'''
