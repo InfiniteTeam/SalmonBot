@@ -1411,15 +1411,16 @@ async def on_message(message):
             # ==================== data.go.kr ====================
 
             elif message.content.startswith(prefix + '주소검색'):
-                cmdlen = 4
-                query = message.content[len(prefix)+1+cmdlen:]
-                if query:
-                    async with message.channel.typing():
+                if type(serverid_or_type) == int:
+                    cmdlen = 4
+                    query = message.content[len(prefix)+1+cmdlen:]
+                    if query:
                         page = 0
                         perpage = 5
-                        addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
-                        header = datagokr.searchAddressesHeader(addresses)
-                        total = header['totalCount']
+                        async with message.channel.typing():
+                            addresses = datagokr.searchAddresses(datagokr_key, query, 1, 50)
+                            header = datagokr.searchAddressesHeader(addresses)
+                            total = header['totalCount']
                         if total == None or total == 0:
                             miniembed = discord.Embed(title='❌ 검색된 주소가 하나도 없습니다!', description='**예시를 참고해보세요! (예: 파호동 89, 호산로 125)**', color=color['error'])
                             await message.channel.send(embed=miniembed)
@@ -1462,117 +1463,122 @@ async def on_message(message):
                                     elif pagect[0] == None: break
                             msglog(message, '[주소검색: 정지]')
 
-                else:
-                    miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
-                    await message.channel.send(embed=miniembed)
-                    msglog(message, '[주소검색: 주소입력]')
+                    else:
+                        miniembed = discord.Embed(title='❌ 검색할 주소를 입력해주세요!', description='**(예: 파호동 89, 호산로 125)**', color=color['error'])
+                        await message.channel.send(embed=miniembed)
+                        msglog(message, '[주소검색: 주소입력]')
+                else: 
+                    await message.channel.send(embed=onlyguild())
 
             elif message.content.startswith(prefix + '마스크'):
-                cmdlen = 3
-                addr = message.content[len(prefix)+1+cmdlen:]
-                notexistsmsg = '''**! 검색 양식을 확인해주세요 !**\n1. 반드시 `~~도` 또는 `~~광역시(특별시)`를 붙여야 합니다.\n2. 그 다음에는 반드시 `구/동/군/면/읍` 등을 입력하세요!\n(예: `대구광역시 달서구 파호동`, `경상북도 군위군 군위읍`)'''
-                if addr:
-                    page = 0
-                    perpage = 4
-                    masks = datagokr.corona19Masks_byaddr(addr)
-                    total = masks['count']
-                    if total == None or total == 0:
-                        # =============== Re-search ===============
-                        llpage = 0
-                        llperpage = 4
-                        lladdr = kakaoapi.search_address(kakaoapi_secret, addr, 1, 1)
-                        lladdrtotal = lladdr['meta']['total_count']
-                        if lladdrtotal == None or lladdrtotal == 0:
-                            miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', color=color['error'])
-                            await message.channel.send(embed=miniembed)
-                            msglog(message, '[마스크: 결과없음]')
-                        else:
-                            ll_lat = lladdr['documents'][0]['y']
-                            ll_lng = lladdr['documents'][0]['x']
-                            llmasks = datagokr.corona19Masks_bygeo(ll_lat, ll_lng)
-                            llmaskstotal = llmasks['count']
-                            if llmaskstotal == None or llmaskstotal == 0:
+                if serverid_or_type == int:
+                    cmdlen = 3
+                    addr = message.content[len(prefix)+1+cmdlen:]
+                    notexistsmsg = '''**! 검색 양식을 확인해주세요 !**\n1. 반드시 `~~도` 또는 `~~광역시(특별시)`를 붙여야 합니다.\n2. 그 다음에는 반드시 `구/동/군/면/읍` 등을 입력하세요!\n(예: `대구광역시 달서구 파호동`, `경상북도 군위군 군위읍`)'''
+                    if addr:
+                        page = 0
+                        perpage = 4
+                        masks = datagokr.corona19Masks_byaddr(addr)
+                        total = masks['count']
+                        if total == None or total == 0:
+                            # =============== Re-search ===============
+                            llpage = 0
+                            llperpage = 4
+                            lladdr = kakaoapi.search_address(kakaoapi_secret, addr, 1, 1)
+                            lladdrtotal = lladdr['meta']['total_count']
+                            if lladdrtotal == None or lladdrtotal == 0:
                                 miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', color=color['error'])
                                 await message.channel.send(embed=miniembed)
                                 msglog(message, '[마스크: 결과없음]')
                             else:
-                                lltotal = llmasks['count']
-                                if lltotal%llperpage == 0:
-                                    llallpage = lltotal//llperpage
+                                ll_lat = lladdr['documents'][0]['y']
+                                ll_lng = lladdr['documents'][0]['x']
+                                llmasks = datagokr.corona19Masks_bygeo(ll_lat, ll_lng)
+                                llmaskstotal = llmasks['count']
+                                if llmaskstotal == None or llmaskstotal == 0:
+                                    miniembed = discord.Embed(title='❌ 검색된 판매처가 하나도 없습니다!', color=color['error'])
+                                    await message.channel.send(embed=miniembed)
+                                    msglog(message, '[마스크: 결과없음]')
                                 else:
-                                    llallpage = lltotal//llperpage + 1
-                                embed = datagokr.corona19Masks_Embed(llmasks, llpage, llperpage)
-                                embed.set_author(name=botname, icon_url=boticon)
-                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                maskmsg = await message.channel.send(embed=embed)
-                                for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
-                                    await maskmsg.add_reaction(rct)
-                                msglog(message, '[마스크: 마스크]')
-                                while True:
-                                    def maskcheck(reaction, user):
-                                        return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                                    try:
-                                        reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
-                                    except asyncio.TimeoutError:
-                                        await maskmsg.clear_reactions()
-                                        break
+                                    lltotal = llmasks['count']
+                                    if lltotal%llperpage == 0:
+                                        llallpage = lltotal//llperpage
                                     else:
-                                        if lltotal < llperpage: llallpage = 0
-                                        else: 
-                                            llallpage = (lltotal-1)//llperpage
-                                        llpagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=llallpage, perpage=7, nowpage=llpage)
-                                        await llpagect[1]
-                                        if type(llpagect[0]) == int:
-                                            msglog(message, '[마스크: 반응 추가함]')
-                                            if llpage != llpagect[0]:
-                                                llpage = llpagect[0]
-                                                embed = datagokr.corona19Masks_Embed(llmasks, llpage, llperpage)
-                                                embed.set_author(name=botname, icon_url=boticon)
-                                                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                                await maskmsg.edit(embed=embed)
-                                        elif llpagect[0] == None: break
-                                msglog(message, '[마스크: 정지]')
-                        # =============== Re-search END ===============
-                    else:
-                        if total%perpage == 0:
-                            allpage = total//perpage
+                                        llallpage = lltotal//llperpage + 1
+                                    embed = datagokr.corona19Masks_Embed(llmasks, llpage, llperpage)
+                                    embed.set_author(name=botname, icon_url=boticon)
+                                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                    maskmsg = await message.channel.send(embed=embed)
+                                    for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                        await maskmsg.add_reaction(rct)
+                                    msglog(message, '[마스크: 마스크]')
+                                    while True:
+                                        def maskcheck(reaction, user):
+                                            return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                        try:
+                                            reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
+                                        except asyncio.TimeoutError:
+                                            await maskmsg.clear_reactions()
+                                            break
+                                        else:
+                                            if lltotal < llperpage: llallpage = 0
+                                            else: 
+                                                llallpage = (lltotal-1)//llperpage
+                                            llpagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=llallpage, perpage=7, nowpage=llpage)
+                                            await llpagect[1]
+                                            if type(llpagect[0]) == int:
+                                                msglog(message, '[마스크: 반응 추가함]')
+                                                if llpage != llpagect[0]:
+                                                    llpage = llpagect[0]
+                                                    embed = datagokr.corona19Masks_Embed(llmasks, llpage, llperpage)
+                                                    embed.set_author(name=botname, icon_url=boticon)
+                                                    embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                                    await maskmsg.edit(embed=embed)
+                                            elif llpagect[0] == None: break
+                                    msglog(message, '[마스크: 정지]')
+                            # =============== Re-search END ===============
                         else:
-                            allpage = total//perpage + 1
-                        embed = datagokr.corona19Masks_Embed(masks, page, perpage)
-                        embed.set_author(name=botname, icon_url=boticon)
-                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                        maskmsg = await message.channel.send(embed=embed)
-                        for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
-                            await maskmsg.add_reaction(rct)
-                        msglog(message, '[마스크: 마스크]')
-                        while True:
-                            def maskcheck(reaction, user):
-                                return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
-                            try:
-                                reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
-                            except asyncio.TimeoutError:
-                                await maskmsg.clear_reactions()
-                                break
+                            if total%perpage == 0:
+                                allpage = total//perpage
                             else:
-                                if total < perpage: allpage = 0
-                                else: 
-                                    allpage = (total-1)//perpage
-                                pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=allpage, perpage=7, nowpage=page)
-                                await pagect[1]
-                                if type(pagect[0]) == int:
-                                    msglog(message, '[마스크: 반응 추가함]')
-                                    if page != pagect[0]:
-                                        page = pagect[0]
-                                        embed = datagokr.corona19Masks_Embed(masks, page, perpage)
-                                        embed.set_author(name=botname, icon_url=boticon)
-                                        embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                                        await maskmsg.edit(embed=embed)
-                                elif pagect[0] == None: break
-                        msglog(message, '[마스크: 정지]')
-                else:
-                    miniembed = discord.Embed(title='❌ 주변 판매처를 검색할 주소를 입력해주세요!', description=notexistsmsg, color=color['error'])
-                    await message.channel.send(embed=miniembed)
-                    msglog(message, '[마스크: 주소입력]')
+                                allpage = total//perpage + 1
+                            embed = datagokr.corona19Masks_Embed(masks, page, perpage)
+                            embed.set_author(name=botname, icon_url=boticon)
+                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                            maskmsg = await message.channel.send(embed=embed)
+                            for rct in ['⏪', '◀', '⏹', '▶', '⏩']:
+                                await maskmsg.add_reaction(rct)
+                            msglog(message, '[마스크: 마스크]')
+                            while True:
+                                def maskcheck(reaction, user):
+                                    return user == message.author and maskmsg.id == reaction.message.id and str(reaction.emoji) in ['⏪', '◀', '⏹', '▶', '⏩']
+                                try:
+                                    reaction, user = await client.wait_for('reaction_add', timeout=300.0, check=maskcheck)
+                                except asyncio.TimeoutError:
+                                    await maskmsg.clear_reactions()
+                                    break
+                                else:
+                                    if total < perpage: allpage = 0
+                                    else: 
+                                        allpage = (total-1)//perpage
+                                    pagect = pagecontrol.naverPageControl(reaction=reaction, user=user, msg=maskmsg, allpage=allpage, perpage=7, nowpage=page)
+                                    await pagect[1]
+                                    if type(pagect[0]) == int:
+                                        msglog(message, '[마스크: 반응 추가함]')
+                                        if page != pagect[0]:
+                                            page = pagect[0]
+                                            embed = datagokr.corona19Masks_Embed(masks, page, perpage)
+                                            embed.set_author(name=botname, icon_url=boticon)
+                                            embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
+                                            await maskmsg.edit(embed=embed)
+                                    elif pagect[0] == None: break
+                            msglog(message, '[마스크: 정지]')
+                    else:
+                        miniembed = discord.Embed(title='❌ 주변 판매처를 검색할 주소를 입력해주세요!', description=notexistsmsg, color=color['error'])
+                        await message.channel.send(embed=miniembed)
+                        msglog(message, '[마스크: 주소입력]')
+                else: 
+                    await message.channel.send(embed=onlyguild())
 
             # ==================== MASTER ONLY ====================
             elif message.content.startswith(prefix + '//'):
@@ -1625,10 +1631,18 @@ async def on_message(message):
                             msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
                         elif message.content == prefix + '//restart --db':
                             sshcmd('sudo systemctl restart mysql')
-                            await message.channel.send('DONE')
+                            await message.channel.send('DONE. Please restart the bot script.')
                         elif message.content == prefix + '//restart --dbsv':
                             sshcmd('sudo reboot')
-                            await message.channel.send('REBOOTING. Please restart the bot script')
+                            await message.channel.send('REBOOTING. Please restart the bot script.')
+                        elif message.content == prefix + '//restart --bot':
+                            sshcmd('pm2 restart bot')
+                        elif message.content == prefix + '//update --bot':
+                            if config['betamode'] == True:
+                                await message.channel.send("Cannot update bot on beta mode.")
+                            else:
+                                sshcmd('cd /home/pi/GitHub/SalmonBot && git pull')
+                                await message.channel.send('DONE.')
                         elif message.content.startswith(prefix + '//noti '):
                             cmdlen = 8
                             print(cur.execute('select * from serverdata where noticechannel is not NULL'))
