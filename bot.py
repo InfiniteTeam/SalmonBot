@@ -189,14 +189,14 @@ async def secloop():
                     await globalmsg.channel.send(f'🤬 <@{spamuser}> 너님은 차단되었고 영원히 명령어를 쓸 수 없습니다. 사유: 명령어 도배')
                     msglog(globalmsg, '[차단됨. 사유: 명령어 도배]')
                 seclist = []
-    except BaseException:
+    except Exception:
         traceback.print_exc()
-
+        
 @tasks.loop(seconds=2)
 async def dbrecon():
     try:
         db.ping(reconnect=False)
-    except BaseException:
+    except Exception:
         traceback.print_exc()
         logger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
@@ -210,7 +210,7 @@ async def activityLoop():
         await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(aclist[acnum]))
         if acnum >= len(aclist)-1: acnum = 0
         else: acnum += 1
-    except BaseException:
+    except Exception:
         traceback.print_exc()
 
 @client.event
@@ -262,10 +262,16 @@ async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
     excinfo = sys.exc_info()
     errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
+    tb = traceback.format_tb(excinfo[2])
     if not excinfo[0] in ignoreexc:
-        await args[0].channel.send(embed=errormsg(errstr, args[0]))
-        if cur.execute('select * from userdata where id=%s and type=%s', (args[0].author.id, 'Master')) == 0:
-            errlogger.error(errstr + '\n=========================')
+        if 'Missing Permissions' in str(excinfo[1]):
+            miniembed = discord.Embed(title='⛔ 권한 부족!', description=f'이 명령어의 동작에 필요한 연어봇의 권한이 부족합니다!\n`{prefix}봇권한 채널` 명령으로 연어봇의 권한을 확인할 수 있습니다.', color=color['error'])
+            await args[0].channel.send(embed=miniembed)
+            msglog(args[0], '[권한 부족!]')
+        else:
+            await args[0].channel.send(embed=errormsg(errstr, args[0]))
+            if cur.execute('select * from userdata where id=%s and type=%s', (args[0].author.id, 'Master')) == 0:
+                errlogger.error(errstr + '\n=========================')
             
 
 @client.event

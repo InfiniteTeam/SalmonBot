@@ -131,3 +131,6 @@ def corona19Masks_Embed(jsonresults, page, perpage, color=0x3DB7CC):
             break
     embed.add_field(name='ㅤ', value=resultinfoPanel(total, page, perpage, display=total), inline=False)
     return embed
+
+    def subwayInfo_findStnList():
+        pass
