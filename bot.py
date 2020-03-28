@@ -249,11 +249,11 @@ async def on_guild_join(guild):
 
         return noticechs[0]
         
-        notich = search_noticechannel()
-        cur.execute('insert into serverdata values (%s, %s)', (guild.id, notich.id))
-        logger.info(f'새 서버: {guild.id}, 공지 채널: {notich.id}')
-        if notich != None:
-            await notich.send(f'안녕하세요! 연어봇을 서버에 초대해주셔서 감사합니다. `{prefix}도움`을 입력해 전체 명령어를 보실 수 있어요. 현재 채널이 공지 채널로 감지되었으며 `{prefix}공지채널` 명령으로 연어봇의 공지 채널을 변경할 수 있어요.')
+    notich = search_noticechannel()
+    cur.execute('insert into serverdata values (%s, %s)', (guild.id, notich.id))
+    logger.info(f'새 서버: {guild.id}, 공지 채널: {notich.id}')
+    if notich != None:
+        await notich.send(f'안녕하세요! 연어봇을 서버에 초대해주셔서 감사합니다. `{prefix}도움`을 입력해 전체 명령어를 보실 수 있어요. 현재 채널이 공지 채널로 감지되었으며 `{prefix}공지채널` 명령으로 연어봇의 공지 채널을 변경할 수 있어요.')
 
 @client.event
 async def on_guild_remove(guild):
