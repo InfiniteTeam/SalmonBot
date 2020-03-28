@@ -557,7 +557,7 @@ async def on_message(message):
             elif message.content == prefix + '공지채널':
                 if message.channel.permissions_for(message.author).administrator:
                     cur.execute('select * from serverdata where id=%s', message.guild.id)
-                    servernoticeid = serverfetch[0]['noticechannel']
+                    servernoticeid = cur.fetchall()[0]['noticechannel']
                     if servernoticeid == None:
                         embed=discord.Embed(title='📢 공지채널 설정', color=color['ask'], timestamp=datetime.datetime.utcnow(),
                         description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널이 설정되어 있지 않습니다. 이 채널을 공지 채널로 설정할까요?')
