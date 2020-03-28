@@ -215,35 +215,39 @@ async def activityLoop():
 
 @client.event
 async def on_guild_join(guild):
+    print('dd')
     if cur.execute('select * from serverdata where id=%s', guild.id) == 0: # 서버 자동 등록 및 공지채널 자동 찾기.
-        def search_noticechannel(): # 공지 및 봇 관련된 단어가 포함되어 있고 메시지 보내기 권한이 있는 채널을 찾음, 없으면 메시지 보내기 권한이 있는 맨 위 채널로 선택.
-            noticechs = []
-            freechannel = None
-            for channel in guild.text_channels:
-                if channel.permissions_for(guild.get_member(client.user.id)).send_messages:
-                    freechannel = channel
-                    if '공지' in channel.name and '봇' in channel.name:
-                        noticechs.append(channel)
-                        break
-                    elif 'noti' in channel.name.lower() and 'bot' in channel.name.lower():
-                        noticechs.append(channel)
-                        break
-                    elif '공지' in channel.name:
-                        noticechs.append(channel)
-                        break
-                    elif 'noti' in channel.name.lower():
-                        noticechs.append(channel)
-                        break
-                    elif '봇' in channel.name:
-                        noticechs.append(channel)
-                        break
-                    elif 'bot' in channel.name.lower():
-                        noticechs.append(channel)
-                        break
-            if noticechs == []:
-                noticechs.append(freechannel)
+        pass
+    else:
+        cur.execute('delete from serverdata where id=%s', guild.id)
+    def search_noticechannel(): # 공지 및 봇 관련된 단어가 포함되어 있고 메시지 보내기 권한이 있는 채널을 찾음, 없으면 메시지 보내기 권한이 있는 맨 위 채널로 선택.
+        noticechs = []
+        freechannel = None
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.get_member(client.user.id)).send_messages:
+                freechannel = channel
+                if '공지' in channel.name and '봇' in channel.name:
+                    noticechs.append(channel)
+                    break
+                elif 'noti' in channel.name.lower() and 'bot' in channel.name.lower():
+                    noticechs.append(channel)
+                    break
+                elif '공지' in channel.name:
+                    noticechs.append(channel)
+                    break
+                elif 'noti' in channel.name.lower():
+                    noticechs.append(channel)
+                    break
+                elif '봇' in channel.name:
+                    noticechs.append(channel)
+                    break
+                elif 'bot' in channel.name.lower():
+                    noticechs.append(channel)
+                    break
+        if noticechs == []:
+            noticechs.append(freechannel)
 
-            return noticechs[0]
+        return noticechs[0]
         
         notich = search_noticechannel()
         cur.execute('insert into serverdata values (%s, %s)', (guild.id, notich.id))
@@ -553,7 +557,11 @@ async def on_message(message):
             elif message.content == prefix + '공지채널':
                 if message.channel.permissions_for(message.author).administrator:
                     cur.execute('select * from serverdata where id=%s', message.guild.id)
-                    servernoticeid = cur.fetchall()[0]['noticechannel']
+                    serverfetch = cur.fetchall()
+                    if len(serverfetch) > 0:
+                        servernoticeid = serverfetch[0]['noticechannel']
+                    else:
+                        
                     if servernoticeid == None:
                         embed=discord.Embed(title='📢 공지채널 설정', color=color['ask'], timestamp=datetime.datetime.utcnow(),
                         description=f'현재 {message.guild.name} 서버의 {botname} 공지 채널이 설정되어 있지 않습니다. 이 채널을 공지 채널로 설정할까요?')
