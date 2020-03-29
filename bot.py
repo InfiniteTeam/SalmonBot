@@ -1631,7 +1631,8 @@ async def on_message(message):
                             msglog(message, f'[AWAIT] {message.content[len(prefix)+8:]}')
                         elif message.content == prefix + '//restart --db':
                             sshcmd('sudo systemctl restart mysql')
-                            await message.channel.send('DONE. Please restart the bot script.')
+                            await message.channel.send('DONE. RESTARTING BOT...')
+                            sshcmd('pm2 restart bot')
                         elif message.content == prefix + '//restart --dbsv':
                             sshcmd('sudo reboot')
                             await message.channel.send('REBOOTING. Please restart the bot script.')
