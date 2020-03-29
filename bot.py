@@ -1635,7 +1635,7 @@ async def on_message(message):
                             sshcmd('pm2 restart bot')
                         elif message.content == prefix + '//restart --dbsv':
                             sshcmd('sudo reboot')
-                            await message.channel.send('REBOOTING. Please restart the bot script.')
+                            await message.channel.send('REBOOTING. Please restart the bot manually.')
                         elif message.content == prefix + '//restart --bot':
                             sshcmd('pm2 restart bot')
                         elif message.content == prefix + '//update --bot':
