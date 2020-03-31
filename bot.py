@@ -154,9 +154,9 @@ async def on_ready():
     logger.info(f'Logged in as {client.user}')
     if config['betamode'] == True:
         logger.warning(f'BETA MODE ENABLED.')
-        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token)
+        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token, version=versionPrefix + versionNum)
     else:
-        pulse.send_pulse.start(client=client, user='salmonbot', token=token)
+        pulse.send_pulse.start(client=client, user='salmonbot', token=token, version=versionPrefix + versionNum)
     secloop.start()
     dbrecon.start()
     activityLoop.start()
