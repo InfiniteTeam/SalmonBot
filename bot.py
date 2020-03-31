@@ -32,10 +32,10 @@ with open('./data/color.json', encoding='utf-8') as color_file:
 if platform.system() == 'Windows':
     if config['betamode'] == False:
         with open('C:/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
-            token = token_file.readline()
+            token = token_file.read()
     else:
         with open('C:/salmonbot/' + config['betatokenFileName'], encoding='utf-8') as token_file:
-            token = token_file.readline()
+            token = token_file.read()
     with open('C:/salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
     with open('C:/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
@@ -45,10 +45,10 @@ if platform.system() == 'Windows':
 elif platform.system() == 'Linux':
     if config['betamode'] == False:
         with open('/home/pi/salmonbot/' + config['tokenFileName'], encoding='utf-8') as token_file:
-            token = token_file.readline()
+            token = token_file.read()
     else:
         with open('/home/pi/salmonbot/' + config['betatokenFileName'], encoding='utf-8') as token_file:
-            token = token_file.readline()
+            token = token_file.read()
     with open('/home/pi/salmonbot/' + config['dbacName'], encoding='utf-8') as dbac_file:
         dbac = json.load(dbac_file)
     with open('/home/pi/salmonbot/' + config['sshFileName'], encoding='utf-8') as ssh_file:
