@@ -7,6 +7,7 @@ import requests
 
 @tasks.loop(seconds=5)
 async def send_pulse(client, user, token):
+    print(token)
     try:
         headers = {
             'IMS-User': user,
