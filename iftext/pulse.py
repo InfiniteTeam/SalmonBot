@@ -7,18 +7,18 @@ import requests
 
 @tasks.loop(seconds=5)
 async def send_pulse(client, user, token=None, tokenfile=None):
-    if token:
-        headers = {
-            'IMS-User': user,
-            'IMS-Token': token
-        }
-    elif tokenfile:
-
-        headers = {
-            'IMS-User': user,
-            'IMS-Token': tokenfile.read()
-        }
     try:
+        if token != None:
+            headers = {
+                'IMS-User': user,
+                'IMS-Token': token
+            }
+        elif tokenfile != None:
+
+            headers = {
+                'IMS-User': user,
+                'IMS-Token': tokenfile.read()
+            }
         dataset = {
             'client.users/len': len(client.users),
             'client.guilds/len': len(client.guilds),
