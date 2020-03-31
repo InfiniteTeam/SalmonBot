@@ -19,4 +19,4 @@ async def send_pulse(client, user, token):
             }
         resp = requests.post('http://arpa.kro.kr:5000/ims/salmonbot', json=dataset, headers=headers)
     except:
-        pass
+        traceback.print_exc()
