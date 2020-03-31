@@ -10,7 +10,7 @@ async def send_pulse(client, user, token):
     try:
         headers = {
             'IMS-User': user,
-            'IMS-Token': token
+            'IMS-Token': token.decode('utf-8')
         }
         dataset = {
             'client.users/len': len(client.users),
