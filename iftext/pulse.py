@@ -8,19 +8,19 @@ import requests
 @tasks.loop(seconds=5)
 async def send_pulse(client, user, token):
     t = token
-    if type(d) == bytes:
+    if type(t) == bytes:
         t = token.decode('utf-8').strip()
 
     try:
         headers = {
             'IMS-User': user,
-            'IMS-Token': token
+            'IMS-Token': t
         }
         dataset = {
             'client.users/len': len(client.users),
             'client.guilds/len': len(client.guilds),
             'client.latency': client.latency
             }
-        resp = requests.post('http://arpa.kro.kr:5000/ims/salmonbot', json=dataset, headers=headers)
+        resp = requests.post('http://arpa.kro.kr:5000/ims/dataset', json=dataset, headers=headers)
     except:
         traceback.print_exc()
