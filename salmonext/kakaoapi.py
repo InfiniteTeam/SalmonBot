@@ -40,8 +40,8 @@ def text_recognize(clientsec, image_file, boxes):
 
 def search_address(clientsec, query, page, size):
     headers = {'Authorization': 'KakaoAK {}'.format(clientsec)}
-    data = {'query': query, 'page': page, 'size': size}
-    resp = requests.post('https://dapi.kakao.com/v2/local/search/address.json', headers=headers, data=data)
+    params = {'query': query, 'page': page, 'size': size}
+    resp = requests.get('https://dapi.kakao.com/v2/local/search/address.json', headers=headers, params=params)
     resp.raise_for_status()
     result = resp.json()
     return result

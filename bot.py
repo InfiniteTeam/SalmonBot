@@ -17,6 +17,7 @@ import sys
 import urllib.request
 import traceback
 import websockets
+from iftext import pulse
 from salmonext import naverapi, pagecontrol, salmoncmds, kakaoapi, mapgridcvt, datagokr
 
 # =============== Local Data Load ===============
@@ -153,10 +154,13 @@ async def on_ready():
     logger.info(f'Logged in as {client.user}')
     if config['betamode'] == True:
         logger.warning(f'BETA MODE ENABLED.')
+        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token)
+    else:
+        pulse.send_pulse.start(client=client, user='salmonbot', token=token)
     secloop.start()
     dbrecon.start()
     activityLoop.start()
-    #await client.change_presence(status=eval(f'discord.Status.{status}'), activity=discord.Game(activity)) # presence 를 설정 데이터 첫째로 적용합니다.
+    
 
 @tasks.loop(seconds=5)
 async def secloop():
@@ -372,35 +376,6 @@ async def on_message(message):
                         msglog(message, '[탈퇴: 취소됨]')
 
             elif message.content == prefix + '도움':
-                '''
-                helpstr_salmonbot = f"""\
-                    `{prefix}도움`: 전체 명령어를 확인합니다.
-                    `{prefix}정보`: 봇 정보를 확인합니다.
-                    `{prefix}핑`: 봇 지연시간을 확인합니다.
-                    `{prefix}데이터서버`: 데이터서버의 CPU 점유율, 메모리 사용량 및 데이터베이스 연결 상태를 확인합니다.
-                    `{prefix}봇권한 서버`: 현재 서버에서 {botname}이 가진 권한을 확인합니다.
-                    `{prefix}봇권한 채널 [채널 멘션]`: 서버 채널에서 {botname}이 가진 권한을 확인합니다.
-                    `{prefix}봇권한 채널목록`: 서버 채널에서 {botname}이 접근(읽기/쓰기/듣기/말하기)할 수 있는 채널 목록을 확인합니다.
-                    `{prefix}공지채널`: 현재 채널을 {botname} 공지채널로 설정합니다.
-                    """
-                helpstr_naverapi = f"""\
-                    `{prefix}네이버검색 (블로그/뉴스/책/백과사전/이미지) (검색어) [&&정확도순/&&최신순]`,
-                    `{prefix}네이버검색 쇼핑 (검색어) [&&정확도순/&&최신순/&&가격높은순/&&가격낮은순]`,
-                    `{prefix}네이버검색 (영화/웹문서/전문자료) (검색어)`:
-                    ㅤ네이버 검색 API를 사용해 검색합니다.
-                    ㅤ사용예: `네이버검색 백과사전 파이썬 &&최신순`
-                    `{prefix}웹주소단축 (주소)`: 입력한 긴 웹주소를 짧게 단축합니다.
-                    `{prefix}무슨언어 (텍스트)`: 네이버 파파고 언어 감지 기능으로 입력한 텍스트의 언어를 감지합니다.
-                    """
-                embed=discord.Embed(title='전체 명령어', description='**`(소괄호)`는 반드시 입력해야 하는 부분, `[대괄호]`는 입력하지 않아도 되는 부분입니다.**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
-                embed.set_author(name=botname, icon_url=boticon)
-                embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
-                embed.add_field(name='ㅤ\n연어봇', inline=False, value=helpstr_salmonbot)
-                embed.add_field(name='네이버 오픈 API', inline=False, value=helpstr_naverapi)
-                
-                await message.channel.send(embed=embed)
-                msglog(message, '[도움]')
-                '''
                 embed=discord.Embed(description='**[전체 명령어 보기](https://help.infiniteteam.me/salmonbot)**', color=color['salmon'], timestamp=datetime.datetime.utcnow())
                 embed.set_author(name=botname, icon_url=boticon)
                 embed.set_footer(text=message.author, icon_url=message.author.avatar_url)
