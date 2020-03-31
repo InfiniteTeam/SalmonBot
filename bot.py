@@ -156,7 +156,7 @@ async def on_ready():
         logger.warning(f'BETA MODE ENABLED.')
         pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token)
     else:
-        pulse.send_pulse.start(client=client, user='salmonbot', token=str(token))
+        pulse.send_pulse.start(client=client, user='salmonbot', tokenfile=token_file)
     secloop.start()
     dbrecon.start()
     activityLoop.start()

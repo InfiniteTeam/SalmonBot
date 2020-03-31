@@ -6,12 +6,19 @@ import traceback
 import requests
 
 @tasks.loop(seconds=5)
-async def send_pulse(client, user, token):
-    try:
+async def send_pulse(client, user, token=None, tokenfile=None):
+    if token:
         headers = {
             'IMS-User': user,
-            'IMS-Token': str(token)
+            'IMS-Token': token
         }
+    elif tokenfile:
+
+        headers = {
+            'IMS-User': user,
+            'IMS-Token': tokenfile.read()
+        }
+    try:
         dataset = {
             'client.users/len': len(client.users),
             'client.guilds/len': len(client.guilds),
