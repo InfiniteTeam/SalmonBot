@@ -7,14 +7,10 @@ import requests
 
 @tasks.loop(seconds=5)
 async def send_pulse(client, user, token):
-    t = token
-    if type(t) == bytes:
-        t = token.decode('utf-8').strip()
-
     try:
         headers = {
             'IMS-User': user,
-            'IMS-Token': t
+            'IMS-Token': str(t)
         }
         dataset = {
             'client.users/len': len(client.users),
