@@ -20,6 +20,7 @@ async def send_pulse(client, user, token, version=None):
             guildids.append(g.id)
         dataset = {
             'version': version,
+            'last-alive-time': datetime.datetime.now().strftime('%Y-%m-%d %X')
             'client.users/len': len(client.users),
             'client.guilds/len': len(client.guilds),
             'client.users;ids': userids,
