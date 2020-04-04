@@ -14,5 +14,6 @@
     "localRun": false,
     "betamode": true,
     "botIconUrl": "https://k.kakaocdn.net/dn/FsKzh/btqBWCb6dAj/RlRt4Ay1ttQnff41vA40bK/char.png?attach=1&knm=img.png",
-    "thumbnailUrl": "https://k.kakaocdn.net/dn/omoP0/btqB0fNhk6Q/a98du2XtKUkOISuUMPjIT1/icon.png?attach=1&knm=img.png"
+    "thumbnailUrl": "https://k.kakaocdn.net/dn/omoP0/btqB0fNhk6Q/a98du2XtKUkOISuUMPjIT1/icon.png?attach=1&knm=img.png",
+    "ims_host": "arpa.kro.kr"
 }
