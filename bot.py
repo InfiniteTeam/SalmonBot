@@ -70,6 +70,7 @@ activity = config['activity']
 status = config['status']
 boticon = config['botIconUrl']
 thumbnail = config['thumbnailUrl']
+imshost = config['ims_host']
 for i in color.keys(): # convert HEX to DEC
     color[i] = int(color[i], 16)
 
@@ -154,9 +155,9 @@ async def on_ready():
     logger.info(f'Logged in as {client.user}')
     if config['betamode'] == True:
         logger.warning(f'BETA MODE ENABLED.')
-        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token, version=versionPrefix + versionNum)
+        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token, host=imshost, version=versionPrefix + versionNum)
     else:
-        pulse.send_pulse.start(client=client, user='salmonbot', token=token, version=versionPrefix + versionNum)
+        pulse.send_pulse.start(client=client, user='salmonbot', token=token, host=imshost, version=versionPrefix + versionNum)
     secloop.start()
     dbrecon.start()
     activityLoop.start()

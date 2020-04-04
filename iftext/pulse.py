@@ -6,7 +6,7 @@ import traceback
 import requests
 
 @tasks.loop(seconds=5)
-async def send_pulse(client, user, token, version=None):
+async def send_pulse(client, user, token, host, version=None):
     try:
         headers = {
             'IMS-User': user,
@@ -27,6 +27,6 @@ async def send_pulse(client, user, token, version=None):
             'client.guilds;ids': guildids,
             'client.latency': client.latency
             }
-        resp = requests.post('http://arpa.kro.kr:5000/ims/dataset', json=dataset, headers=headers)
+        resp = requests.post(f'http://{host}/ims/dataset', json=dataset, headers=headers)
     except:
         traceback.print_exc()
