@@ -1687,4 +1687,8 @@ def notexists():
     msglog(globalmsg, '[존재하지 않는 명령어]')
     return embed
 
-client.run(token)
+while True:
+    try:
+        client.run(token)
+    except:
+        traceback.print_exc()
