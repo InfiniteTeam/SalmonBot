@@ -27,6 +27,12 @@ with open('./data/color.json', encoding='utf-8') as color_file:
 with open('./data/emojis.json', encoding='utf-8') as emojis_file:
     emojis = json.load(emojis_file)
 
+# Make Dir
+reqdirs = ['./logs', './logs/salmon', './logs/error', './logs/ping']
+for dit in reqdirs:
+    if not os.path.isdir(dit):
+        os.makedirs(dit)
+
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -102,12 +108,6 @@ elif platform.system() == 'Linux':
             ssh = json.load(ssh_file)
         with open(os.path.abspath(config['securedir']['Android']) + '/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
             openapi = json.load(openapi_file)
-
-# Make Dir
-reqdirs = ['./logs', './logs/salmon', './logs/error', './logs/ping']
-for dit in reqdirs:
-    if not os.path.isdir(dit):
-        os.makedirs(dit)
 
 prefix = config['prefix']
 activity = config['activity']
