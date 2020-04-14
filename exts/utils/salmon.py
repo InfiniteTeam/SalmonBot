@@ -20,7 +20,7 @@ class Salmon(commands.Bot):
 
     def set_data(self, name, value):
         try:
-            self.data[name] = value
+            self.datas[name] = value
         except KeyError:
             raise KeyError(f"'{name}' 글로벌 데이터가 존재하지 않습니다.")
 

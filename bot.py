@@ -15,7 +15,7 @@ import pymysql
 import sys
 import traceback
 from iftext import pulse
-from exts.utils import checks, errors, emojictrl
+from exts.utils import checks, errors, emojictrl, msglogger
 
 # Local Data Load
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -39,14 +39,14 @@ log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 log_streamh = logging.StreamHandler()
 log_streamh.setFormatter(log_formatter)
 logger.addHandler(log_streamh)
-log_fileh = logging.handlers.RotatingFileHandler('./logs/salmon/salmon.log', maxBytes=config['maxlogbytes'], backupCount=10)
+log_fileh = logging.handlers.RotatingFileHandler('./logs/salmon/salmon.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
 log_fileh.setFormatter(log_formatter)
 logger.addHandler(log_fileh)
 
 pinglogger = logging.getLogger('ping')
 pinglogger.setLevel(logging.INFO)
 ping_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-ping_fileh = logging.handlers.RotatingFileHandler('./logs/ping/ping.log', maxBytes=config['maxlogbytes'], backupCount=10)
+ping_fileh = logging.handlers.RotatingFileHandler('./logs/ping/ping.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
 ping_fileh.setFormatter(ping_formatter)
 pinglogger.addHandler(ping_fileh)
 
@@ -56,7 +56,7 @@ err_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 err_streamh = logging.StreamHandler()
 err_streamh.setFormatter(err_formatter)
 errlogger.addHandler(err_streamh)
-err_fileh = logging.handlers.RotatingFileHandler('./logs/error/error.log', maxBytes=config['maxlogbytes'], backupCount=10)
+err_fileh = logging.handlers.RotatingFileHandler('./logs/error/error.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
 err_fileh.setFormatter(err_formatter)
 errlogger.addHandler(err_fileh)
 
@@ -139,6 +139,7 @@ logger.info('확장 및 명령을 로드합니다.')
 # Start Bot
 client = Salmon(command_prefix=prefix, error=errors, status=discord.Status.dnd, activity=discord.Game('연어봇 시작'))
 client.remove_command('help')
+msglog = msglogger.Msglog(logger)
 
 check = checks.Checks(cur=cur, error=errors)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
@@ -167,7 +168,7 @@ async def presence_loop():
         gamenum = 0
     else:
         gamenum += 1
-
+client.invoke
 @client.event
 async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
@@ -179,62 +180,115 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(ctx: commands.Context, error):
     if hasattr(ctx.command, 'on_error'):
         return
-    if isinstance(error, errors.NotRegistered):
+    elif isinstance(error, errors.NotRegistered):
         await ctx.send(f'등록되지 않은 사용자입니다! `{prefix}등록` 명령으로 등록해주세요!')
+    elif isinstance(error, errors.NotMaster):
+        await ctx.send(f'마스터 사용자가 아닙니다. 관리자만 사용 가능합니다.')
     elif isinstance(error, commands.errors.CommandInvokeError) and 'In embed.description: Must be 2048 or fewer in length.' in str(error):
         embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어(2000자 이상) 전송에 실패했습니다.', color=color['error'])
         await ctx.send(embed=embed)
-    elif isinstance(error, discord.ext.commands.errors.CommandNotFound):
+    elif isinstance(error, commands.errors.CommandNotFound):
         embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
         await ctx.send(embed=embed)
     else:
         # traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-        tb = traceback.format_exception(type(error), error, error.__traceback__)
-        err = [line.rstrip() for line in tb]
-        errlogger.error('\n'.join(err))
-        embed = discord.Embed(title='')
+        tb = traceback.format_exception(type(error), error.__cause__, error.__traceback__)
+        err = []
+        for line in tb:
+            err.append(line.rstrip())
+        errstr = '\n'.join(err)
+        errlogger.error(errstr)
+        embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```\n오류가 기록되었습니다. 나중에 개발자가 확인하고 처리하게 됩니다.', color=color['error'])
         await ctx.send(embed=embed)
 
 # Salmon Commands
-@client.command(name='ext')
+@client.group(name='ext')
 @check.is_master()
-async def _ext(ctx: commands.Context, *args):
-    if args[0] == 'list':
-        allexts = ''
-        for oneext in client.get_data('allexts'):
-            if oneext in client.extensions:
-                allexts += f'{emj.get("check")} {oneext}\n'
-            else:
-                allexts += f'{emj.get("cross")} {oneext}\n'
-        embed = discord.Embed(title=f'🔌 전체 확장 목록', color=color['salmon'], description=
-            f"""\
-                총 {len(client.get_data('allexts'))}개 중 {len(client.extensions)}개 로드됨.
-                {allexts}
-            """
-        )
+async def _ext(ctx: commands.Context):
+    pass
+
+@_ext.command(name='list')
+async def _ext_list(ctx: commands.Context):
+    allexts = ''
+    for oneext in client.get_data('allexts'):
+        if oneext in client.extensions:
+            allexts += f'{emj.get("check")} {oneext}\n'
+        else:
+            allexts += f'{emj.get("cross")} {oneext}\n'
+    embed = discord.Embed(title=f'🔌 전체 확장 목록', color=color['salmon'], description=
+        f"""\
+            총 {len(client.get_data('allexts'))}개 중 {len(client.extensions)}개 로드됨.
+            {allexts}
+        """
+    )
+    msglog.log(ctx, '[전체 확장 목록')
+    await ctx.send(embed=embed)
+
+@_ext.command(name='reload')
+async def _ext_reload(ctx: commands.Context, *names):
+    try:
+        for onename in names:
+            if not (onename in client.extensions):
+                raise commands.ExtensionNotLoaded(f'로드되지 않은 확장: {onename}')
+        for onename in names:
+            client.reload_extension(onename)
+
+    except commands.ExtensionNotLoaded:
+        embed = discord.Embed(description=f'**❓ 로드되지 않았거나 존재하지 않는 확장입니다: `{onename}`**', color=color['error'])
+        await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
         await ctx.send(embed=embed)
     
-    if args[0] == 'reload':
+@_ext.command(name='load')
+async def _ext_load(ctx: commands.Context, *names):
+    try:
+        for onename in names:
+            if not (onename in client.get_data('allexts')):
+                raise commands.ExtensionNotFound(f'존재하지 않는 확장: {onename}')
+            if onename in client.extensions:
+                raise commands.ExtensionAlreadyLoaded(f'이미 로드된 확장: {onename}')
+        for onename in names:
+            client.load_extension(onename)
+
+    except commands.ExtensionNotFound:
+        embed = discord.Embed(description=f'**❓ 존재하지 않는 확장입니다: `{onename}`**', color=color['error'])
+        await ctx.send(embed=embed)
+    except commands.ExtensionAlreadyLoaded:
+        embed = discord.Embed(description=f'**❓ 이미 로드된 확장입니다: `{onename}`**', color=color['error'])
+        await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(description=f'**{emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
+        await ctx.send(embed=embed)
+
+@_ext.command(name='unload')
+async def _ext_unload(ctx: commands.Context, *names):
+    try:
+        for onename in names:
+            if not (onename in client.extensions):
+                raise commands.ExtensionNotLoaded(f'로드되지 않은 확장: {onename}')
+        for onename in names:
+            client.unload_extension(onename)
+
+    except commands.ExtensionNotLoaded:
+        embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{onename}`**', color=color['error'])
+        await ctx.send(embed=embed)
+    else:
+        embed = discord.Embed(description=f'**{emj.get("check")} 확장 언로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
+        await ctx.send(embed=embed)
+
+"""
+    elif args[0] == 'unload':
         name = args[1]
         try:
-            client.reload_extension(name)
+            client.unload_extension(name)
         except commands.ExtensionNotLoaded:
             embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{name}`**', color=color['error'])
             await ctx.send(embed=embed)
         else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{name}`**', color=color['info'])
+            embed = discord.Embed(description=f'**{emj.get("check")} 확장 언로드를 완료했습니다: `{name}`**', color=color['info'])
             await ctx.send(embed=embed)
-
-    if args[0] == 'load':
-        name = args[1]
-        try:
-            client.reload_extension(name)
-        except commands.ExtensionAlreadyLoaded:
-            embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{name}`**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{name}`**', color=color['info'])
-            await ctx.send(embed=embed)
+"""
 
 # Salmon Commands
 logger.info('봇 시작 준비 완료.')
