@@ -84,19 +84,6 @@ if platform.system() == 'Windows':
 elif platform.system() == 'Linux':
     if config['is_android']:
         if config['betamode'] == False:
-            with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['tokenFileName'], encoding='utf-8') as token_file:
-                token = token_file.read()
-        else:
-            with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['betatokenFileName'], encoding='utf-8') as token_file:
-                token = token_file.read()
-        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['dbacName'], encoding='utf-8') as dbac_file:
-            dbac = json.load(dbac_file)
-        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['sshFileName'], encoding='utf-8') as ssh_file:
-            ssh = json.load(ssh_file)
-        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
-            openapi = json.load(openapi_file)
-    else:
-        if config['betamode'] == False:
             with open(os.path.abspath(config['securedir']['Android']) + '/' + config['tokenFileName'], encoding='utf-8') as token_file:
                 token = token_file.read()
         else:
@@ -107,6 +94,19 @@ elif platform.system() == 'Linux':
         with open(os.path.abspath(config['securedir']['Android']) + '/' + config['sshFileName'], encoding='utf-8') as ssh_file:
             ssh = json.load(ssh_file)
         with open(os.path.abspath(config['securedir']['Android']) + '/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
+            openapi = json.load(openapi_file)
+    else:
+        if config['betamode'] == False:
+            with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['tokenFileName'], encoding='utf-8') as token_file:
+                token = token_file.read()
+        else:
+            with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['betatokenFileName'], encoding='utf-8') as token_file:
+                token = token_file.read()
+        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['dbacName'], encoding='utf-8') as dbac_file:
+            dbac = json.load(dbac_file)
+        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['sshFileName'], encoding='utf-8') as ssh_file:
+            ssh = json.load(ssh_file)
+        with open(os.path.abspath(config['securedir']['Linux']) + '/' + config['openapiFileName'], encoding='utf-8') as openapi_file:
             openapi = json.load(openapi_file)
 
 prefix = config['prefix']
