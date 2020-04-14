@@ -149,9 +149,9 @@ gamenum = 0
 @client.event
 async def on_ready():
     logger.info(f'로그인: {client.user.id}')
-    if config['betamode']:
-        logger.info('백그라운드 루프를 시작합니다.')
-        presence_loop.start()
+    logger.info('백그라운드 루프를 시작합니다.')
+    presence_loop.start()
+    if config['betamode']:  
         logger.warning('BETA MODE ENABLED')
         # pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
     else:
