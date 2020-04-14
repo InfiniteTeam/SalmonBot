@@ -142,18 +142,31 @@ client.remove_command('help')
 
 check = checks.Checks(cur=cur, error=errors)
 emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
+gamenum = 0
+
 # Event Functions
 
 @client.event
 async def on_ready():
     logger.info(f'로그인: {client.user.id}')
     if config['betamode']:
+        logger.info('백그라운드 루프를 시작합니다.')
+        presence_loop.start()
         logger.warning('BETA MODE ENABLED')
         # pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
     else:
         pass
         # pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
-    await client.change_presence(status=discord.Status.online, activity=discord.Game('연어봇 베타'))
+
+@tasks.loop(seconds=5)
+async def presence_loop():
+    global gamenum
+    games = [f'연어봇 - {prefix}도움 입력!', f'{len(client.guilds)}개의 서버와 함께', f'{len(client.users)}명의 사용자와 함께']
+    await client.change_presence(status=discord.Status.online, activity=discord.Game(games[gamenum]))
+    if gamenum == len(games) - 1:
+        gamenum = 0
+    else:
+        gamenum += 1
 
 @client.event
 async def on_error(event, *args, **kwargs):
@@ -179,6 +192,8 @@ async def on_command_error(ctx: commands.Context, error):
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         err = [line.rstrip() for line in tb]
         errlogger.error('\n'.join(err))
+        embed = discord.Embed(title='')
+        await ctx.send(embed=embed)
 
 # Salmon Commands
 @client.command(name='ext')
@@ -204,6 +219,17 @@ async def _ext(ctx: commands.Context, *args):
         try:
             client.reload_extension(name)
         except commands.ExtensionNotLoaded:
+            embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{name}`**', color=color['error'])
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{name}`**', color=color['info'])
+            await ctx.send(embed=embed)
+
+    if args[0] == 'load':
+        name = args[1]
+        try:
+            client.reload_extension(name)
+        except commands.ExtensionAlreadyLoaded:
             embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{name}`**', color=color['error'])
             await ctx.send(embed=embed)
         else:
