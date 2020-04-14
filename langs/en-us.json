@@ -1,0 +1,9 @@
+{
+    "salmon": {
+        "help": {
+            "aliases": ["help"],
+            "embed-title": "📃 SalmonBot All Commands",
+            "embed-description": "**[See commands here](https://help.infiniteteam.me/salmonbot)**"
+        }
+    }
+}

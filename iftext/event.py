@@ -1,3 +1,0 @@
-import discord
-import traceback
-

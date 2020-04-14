@@ -2,6 +2,7 @@
 
 import discord
 from discord.ext import commands, tasks
+from exts.utils.salmon import Salmon
 import asyncio
 import platform
 import json
@@ -14,7 +15,7 @@ import pymysql
 import sys
 import traceback
 from iftext import pulse
-from exts import errors
+from exts.utils import checks, errors, emojictrl
 
 # Local Data Load
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -23,8 +24,8 @@ with open('./data/version.json', encoding='utf-8') as version_file:
     version = json.load(version_file)
 with open('./data/color.json', encoding='utf-8') as color_file:
     color = json.load(color_file)
-with open('./langs/ko-kr.json', encoding='utf-8') as langs_file:
-    pass
+with open('./data/emojis.json', encoding='utf-8') as emojis_file:
+    emojis = json.load(emojis_file)
 
 logger = logging.getLogger('salmonbot')
 logger.setLevel(logging.DEBUG)
@@ -54,6 +55,11 @@ err_fileh.setFormatter(err_formatter)
 errlogger.addHandler(err_fileh)
 
 logger.info('========== START ==========')
+
+langs = {}
+for langfile in list(filter(lambda x: os.path.splitext(x)[1] == '.json', os.listdir('./langs'))):
+    with open(f'./langs/{langfile}', encoding='utf-8') as langs_file:
+        langs[os.path.splitext(langfile)[0]] = json.load(langs_file)
 
 # IMPORTant data
 if platform.system() == 'Windows':
@@ -128,48 +134,89 @@ db = pymysql.connect(
 )
 cur = db.cursor(pymysql.cursors.DictCursor)
 
-logger.info('Ready to start bot.')
+logger.info('확장 및 명령을 로드합니다.')
 
 # Start Bot
-client = commands.Bot(command_prefix=prefix, status=discord.Status.dnd, activity=discord.Game('연어봇 시작'))
+client = Salmon(command_prefix=prefix, error=errors, status=discord.Status.dnd, activity=discord.Game('연어봇 시작'))
 client.remove_command('help')
 
+check = checks.Checks(cur=cur, error=errors)
+emj = emojictrl.Emoji(client, emojis['emoji-server'], emojis['emojis'])
 # Event Functions
 
 @client.event
 async def on_ready():
     logger.info(f'로그인: {client.user.id}')
     if config['betamode']:
-        pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
+        logger.warning('BETA MODE ENABLED')
+        # pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
     else:
-        pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
+        pass
+        # pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
+    await client.change_presence(status=discord.Status.online, activity=discord.Game('연어봇 베타'))
 
 @client.event
 async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
     excinfo = sys.exc_info()
     errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
+    errlogger.error(errstr)
 
 @client.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx: commands.Context, error):
+    if hasattr(ctx.command, 'on_error'):
+        return
     if isinstance(error, errors.NotRegistered):
-        await ctx.send('등록되지 않은 사용자입니다!')
-
-# Command Checks
-
-def is_registered():
-    async def check(ctx: commands.Context):
-        if cur.execute('select * from userdata where id=%s', ctx.author.id):
-            return True
-        raise errors.NotRegistered('가입되지 않은 사용자입니다: {}'.format(ctx.author.id))
-    return commands.check(check)
+        await ctx.send(f'등록되지 않은 사용자입니다! `{prefix}등록` 명령으로 등록해주세요!')
+    elif isinstance(error, commands.errors.CommandInvokeError) and 'In embed.description: Must be 2048 or fewer in length.' in str(error):
+        embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어(2000자 이상) 전송에 실패했습니다.', color=color['error'])
+        await ctx.send(embed=embed)
+    elif isinstance(error, discord.ext.commands.errors.CommandNotFound):
+        embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
+        await ctx.send(embed=embed)
+    else:
+        # traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
+        err = [line.rstrip() for line in tb]
+        errlogger.error('\n'.join(err))
 
 # Salmon Commands
+@client.command(name='ext')
+@check.is_master()
+async def _ext(ctx: commands.Context, *args):
+    if args[0] == 'list':
+        allexts = ''
+        for oneext in client.get_data('allexts'):
+            if oneext in client.extensions:
+                allexts += f'{emj.get("check")} {oneext}\n'
+            else:
+                allexts += f'{emj.get("cross")} {oneext}\n'
+        embed = discord.Embed(title=f'🔌 전체 확장 목록', color=color['salmon'], description=
+            f"""\
+                총 {len(client.get_data('allexts'))}개 중 {len(client.extensions)}개 로드됨.
+                {allexts}
+            """
+        )
+        await ctx.send(embed=embed)
+    
+    if args[0] == 'reload':
+        name = args[1]
+        try:
+            client.reload_extension(name)
+        except commands.ExtensionNotLoaded:
+            embed = discord.Embed(description=f'**❓ 로드되지 않은 확장입니다: `{name}`**', color=color['error'])
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{name}`**', color=color['info'])
+            await ctx.send(embed=embed)
 
-@client.command(name='help', aliases=['도움'])
-@is_registered()
-async def _help(ctx: commands.Context):
-    embed = discord.Embed(title=)
-    await ctx.send()
-
+# Salmon Commands
+logger.info('봇 시작 준비 완료.')
+client.add_data('color', color)
+client.add_data('emojictrl', emj)
+client.add_data('check', check)
+client.datas['allexts'] = []
+for ext in list(filter(lambda x: x.endswith('.py'), os.listdir('./exts'))):
+    client.datas['allexts'].append('exts.' + os.path.splitext(ext)[0])
+    client.load_extension('exts.' + os.path.splitext(ext)[0])
 client.run(token)
