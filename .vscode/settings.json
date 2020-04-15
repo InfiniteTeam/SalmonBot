@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "d:\\GitHub\\SalmonBot\\venv\\Scripts\\python.exe"
+    "python.pythonPath": "d:\\GitHub\\SalmonBot\\venv\\Scripts\\python.exe",
+    "liveshare.showReadOnlyUsersInEditor": "always"
 }
