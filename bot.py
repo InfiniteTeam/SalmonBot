@@ -190,6 +190,8 @@ async def on_command_error(ctx: commands.Context, error):
     elif isinstance(error, commands.errors.CommandNotFound):
         embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
         await ctx.send(embed=embed)
+    elif isinstance(error, errors.SentByBotUser):
+        pass
     else:
         # traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
         tb = traceback.format_exception(type(error), error.__cause__, error.__traceback__)
@@ -202,124 +204,20 @@ async def on_command_error(ctx: commands.Context, error):
         await ctx.send(embed=embed)
 
 # Salmon Commands
-@client.group(name='ext')
-@check.is_master()
-async def _ext(ctx: commands.Context):
-    pass
-
-@_ext.command(name='list')
-async def _ext_list(ctx: commands.Context):
-    allexts = ''
-    for oneext in client.get_data('allexts'):
-        if oneext in client.extensions:
-            allexts += f'{emj.get("check")} {oneext}\n'
-        else:
-            allexts += f'{emj.get("cross")} {oneext}\n'
-    embed = discord.Embed(title=f'🔌 전체 확장 목록', color=color['salmon'], description=
-        f"""\
-            총 {len(client.get_data('allexts'))}개 중 {len(client.extensions)}개 로드됨.
-            {allexts}
-        """
-    )
-    msglog.log(ctx, '[전체 확장 목록')
-    await ctx.send(embed=embed)
-
-@_ext.command(name='reload')
-async def _ext_reload(ctx: commands.Context, *names):
-    reloads = client.extensions
-    if (not names) or ('*' in names):
-        for onename in reloads:
-            client.reload_extension(onename)
-        embed = discord.Embed(description=f'**{emj.get("check")} 활성된 모든 확장을 리로드했습니다: `{", ".join(reloads)}`**', color=color['info'])
-        await ctx.send(embed=embed)
-    else:
-        try:
-            for onename in names:
-                if not (onename in reloads):
-                    raise commands.ExtensionNotLoaded(f'로드되지 않은 확장: {onename}')
-            for onename in names:
-                client.reload_extension(onename)
-        except commands.ExtensionNotLoaded:
-            embed = discord.Embed(description=f'**❓ 로드되지 않았거나 존재하지 않는 확장입니다: `{onename}`**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
-            await ctx.send(embed=embed)
-    
-    
-@_ext.command(name='load')
-async def _ext_load(ctx: commands.Context, *names):
-    if not names or '*' in names:
-        loads = list(set(client.get_data('allexts')) - set(client.extensions.keys()))
-        try:
-            if len(loads) == 0:
-                raise commands.ExtensionAlreadyLoaded('모든 확장이 이미 로드되었습니다.')
-            for onename in loads:
-                client.load_extension(onename)
-                
-        except commands.ExtensionAlreadyLoaded:
-            embed = discord.Embed(description='**❌ 모든 확장이 이미 로드되었습니다!**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(loads)}`**', color=color['info'])
-            await ctx.send(embed=embed)
-    else:
-        try:
-            for onename in names:
-                if not (onename in client.get_data('allexts')):
-                    raise commands.ExtensionNotFound(f'존재하지 않는 확장: {onename}')
-                if onename in client.extensions:
-                    raise commands.ExtensionAlreadyLoaded(f'이미 로드된 확장: {onename}')
-            for onename in names:
-                client.load_extension(onename)
-
-        except commands.ExtensionNotFound:
-            embed = discord.Embed(description=f'**❓ 존재하지 않는 확장입니다: `{onename}`**', color=color['error'])
-            await ctx.send(embed=embed)
-        except commands.ExtensionAlreadyLoaded:
-            embed = discord.Embed(description=f'**❌ 이미 로드된 확장입니다: `{onename}`**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
-            await ctx.send(embed=embed)
-
-@_ext.command(name='unload')
-async def _ext_unload(ctx: commands.Context, *names):
-    if not names or '*' in names:
-        unloads = list(client.extensions.keys())
-        try:
-            if len(unloads) == 0:
-                raise commands.ExtensionNotLoaded('로드된 확장이 하나도 없습니다!')
-            for onename in unloads:
-                client.unload_extension(onename)
-        except commands.ExtensionNotLoaded:
-            embed = discord.Embed(description='**❌ 로드된 확장이 하나도 없습니다!`**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(unloads)}`**', color=color['info'])
-            await ctx.send(embed=embed)
-    else:
-        try:
-            for onename in names:
-                if not (onename in client.extensions):
-                    raise commands.ExtensionNotLoaded(f'로드되지 않은 확장: {onename}')
-            for onename in names:
-                client.unload_extension(onename)
-
-        except commands.ExtensionNotLoaded:
-            embed = discord.Embed(description=f'**❌ 로드되지 않은 확장입니다: `{onename}`**', color=color['error'])
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f'**{emj.get("check")} 확장 언로드를 완료했습니다: `{", ".join(names)}`**', color=color['info'])
-            await ctx.send(embed=embed)
-
-# Salmon Commands
 logger.info('봇 시작 준비 완료.')
+
+client.add_check(check.notbot)
+
 client.add_data('color', color)
 client.add_data('emojictrl', emj)
 client.add_data('check', check)
+client.add_data('msglog', msglog)
+client.add_data('errors', errors)
+client.add_data('lockedexts', ['exts.basecmds'])
+
 client.datas['allexts'] = []
 for ext in list(filter(lambda x: x.endswith('.py'), os.listdir('./exts'))):
     client.datas['allexts'].append('exts.' + os.path.splitext(ext)[0])
     client.load_extension('exts.' + os.path.splitext(ext)[0])
+
 client.run(token)

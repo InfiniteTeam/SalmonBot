@@ -27,3 +27,11 @@ class Checks:
 
     def is_master(self):
         return commands.check(self.master)
+
+    async def notbot(self, ctx: commands.Context):
+        if not ctx.author.bot:
+            return True
+        raise self.error.SentByBotUser('봇 유저로부터 메시지를 받았습니다: {}'.format(ctx.author.id))
+
+    def is_notbot(self):
+        return commands.check(self.notbot)

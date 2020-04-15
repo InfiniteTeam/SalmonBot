@@ -7,6 +7,8 @@ class Mastercmds(commands.Cog):
         self.client = client
         self.color = client.get_data('color')
         self.emj = client.get_data('emojictrl')
+        self.msglog = client.get_data('msglog')
+        self.errors = client.get_data('errors')
 
     @commands.command(name='eval')
     async def _eval(self, ctx: commands.Context, *, arg):

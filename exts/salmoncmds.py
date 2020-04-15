@@ -7,6 +7,8 @@ class Salmoncmds(commands.Cog):
         self.client = client
         self.color = client.get_data('color')
         self.emj = client.get_data('emojictrl')
+        self.msglog = client.get_data('msglog')
+        self.errors = client.get_data('errors')
 
     @commands.command(name='help', aliases=['도움'])
     async def _help(self, ctx: commands.Context):

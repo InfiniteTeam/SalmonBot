@@ -8,3 +8,9 @@ class NotMaster(commands.CheckFailure):
 
 class GlobaldataAlreadyAdded(Exception):
     pass
+
+class SentByBotUser(Exception):
+    pass
+
+class LockedExtensionUnloading(Exception):
+    pass
