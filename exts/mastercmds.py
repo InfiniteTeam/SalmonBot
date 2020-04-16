@@ -81,6 +81,7 @@ class Mastercmds(commands.Cog):
                 logstr += f'권한이 없습니다: {guild.id}({guild.name}) 서버의 {notich.id}({notich.name}) 채널.\n'
             else:
                 rst['suc'] += 1
+                logstr += f'공지 전송에 성공했습니다: {guild.id}({guild.name}) 서버의 {notich.id}({notich.name}) 채널.\n'
             finally:
                 embed.set_field_at(0, name='성공', value=str(rst['suc']) + ' 서버')
                 embed.set_field_at(1, name='실패', value=str(rst['exc']) + ' 서버')
