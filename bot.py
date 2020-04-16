@@ -160,6 +160,17 @@ async def on_ready():
         # pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
 
 @tasks.loop(seconds=5)
+async def dbloop():
+    global cur
+    try:
+        cur.ping(reconnect=False)
+    except:
+        traceback.print_exc()
+        errlogger.warning('DB CONNECTION CLOSED. RECONNECTING...')
+        db.ping(reconnect=True)
+        errlogger.info('DB RECONNECT DONE.')
+
+@tasks.loop(seconds=5)
 async def presence_loop():
     global gamenum
     games = [f'연어봇 - {prefix}도움 입력!', f'{len(client.guilds)}개의 서버와 함께', f'{len(client.users)}명의 사용자와 함께']
@@ -194,7 +205,7 @@ async def on_command_error(ctx: commands.Context, error):
         pass
     else:
         # traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-        tb = traceback.format_exception(type(error), error.__cause__, error.__traceback__)
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
         err = []
         for line in tb:
             err.append(line.rstrip())
@@ -213,6 +224,7 @@ client.add_data('emojictrl', emj)
 client.add_data('check', check)
 client.add_data('msglog', msglog)
 client.add_data('errors', errors)
+client.add_data('cur', cur)
 client.add_data('lockedexts', ['exts.basecmds'])
 
 client.datas['allexts'] = []
