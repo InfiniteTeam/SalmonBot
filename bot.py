@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+# 연어봇 - SalmonBot
+#트펙 #왔다감
+#다쿤 #트롤러
+#알파 #지니어스
+#코인 #500원
+#순하 #겜만함
+
 import discord
 from discord.ext import commands, tasks
 from exts.utils.salmon import Salmon
@@ -14,6 +21,7 @@ import logging.handlers
 import pymysql
 import sys
 import traceback
+import itertools
 from iftext import pulse
 from exts.utils import checks, errors, emojictrl, msglogger
 
@@ -39,14 +47,14 @@ log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 log_streamh = logging.StreamHandler()
 log_streamh.setFormatter(log_formatter)
 logger.addHandler(log_streamh)
-log_fileh = logging.handlers.RotatingFileHandler('./logs/salmon/salmon.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
+log_fileh = logging.handlers.RotatingFileHandler('./logs/salmon/salmon.log', maxBytes=config['maxlogbytes'], backupCount=10)
 log_fileh.setFormatter(log_formatter)
 logger.addHandler(log_fileh)
 
 pinglogger = logging.getLogger('ping')
 pinglogger.setLevel(logging.INFO)
 ping_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-ping_fileh = logging.handlers.RotatingFileHandler('./logs/ping/ping.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
+ping_fileh = logging.handlers.RotatingFileHandler('./logs/ping/ping.log', maxBytes=config['maxlogbytes'], backupCount=10)
 ping_fileh.setFormatter(ping_formatter)
 pinglogger.addHandler(ping_fileh)
 
@@ -56,7 +64,7 @@ err_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 err_streamh = logging.StreamHandler()
 err_streamh.setFormatter(err_formatter)
 errlogger.addHandler(err_streamh)
-err_fileh = logging.handlers.RotatingFileHandler('./logs/error/error.log', maxBytes=config['maxlogbytes'], backupCount=10, encoding='utf-8')
+err_fileh = logging.handlers.RotatingFileHandler('./logs/error/error.log', maxBytes=config['maxlogbytes'], backupCount=10)
 err_fileh.setFormatter(err_formatter)
 errlogger.addHandler(err_fileh)
 
@@ -123,6 +131,11 @@ sshclient = paramiko.SSHClient()
 sshclient.set_missing_host_key_policy(paramiko.AutoAddPolicy)
 sshclient.connect(ssh['host'], username=ssh['user'], password=ssh['password'], port=ssh['port'])
 
+async def dbcmd(cmd):
+    stdin, stdout, stderr = sshclient.exec_command(cmd)
+    lines = stdout.readlines()
+    return ''.join(lines)
+
 # DB Connect
 db = pymysql.connect(
     host=dbac['host'],
@@ -152,6 +165,8 @@ async def on_ready():
     logger.info(f'로그인: {client.user.id}')
     logger.info('백그라운드 루프를 시작합니다.')
     presence_loop.start()
+    pingloop.start()
+    dbloop.start()
     if config['betamode']:  
         logger.warning('BETA MODE ENABLED')
         # pulse.send_pulse.start(client=client, user='salmonbot-beta', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
@@ -160,10 +175,32 @@ async def on_ready():
         # pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
 
 @tasks.loop(seconds=5)
+async def pingloop():
+    try:
+        ping = round(client.latency*100000)/100
+        if ping <= 100:
+            pinglevel = '🔵 매우좋음'
+        elif ping > 100 and ping <= 250:
+            pinglevel = '🟢 양호함'
+        elif ping > 250 and ping <= 400:
+            pinglevel = '🟡 보통'
+        elif ping > 400 and ping <= 550:
+            pinglevel = '🔴 나쁨'
+        elif ping > 550:
+            pinglevel = '⚫ 매우나쁨'
+        client.set_data('ping', (ping, pinglevel))
+        pinglogger.info(f'{ping}ms')
+        pinglogger.info(f'DB_OPEN: {db.open}')
+        pinglogger.info(f'CLIENT_CONNECTED: {not client.is_closed()}')
+    except:
+        errlogger.error(traceback.format_exc())
+
+
+@tasks.loop(seconds=5)
 async def dbloop():
     global cur
     try:
-        cur.ping(reconnect=False)
+        db.ping(reconnect=False)
     except:
         traceback.print_exc()
         errlogger.warning('DB CONNECTION CLOSED. RECONNECTING...')
@@ -173,13 +210,16 @@ async def dbloop():
 @tasks.loop(seconds=5)
 async def presence_loop():
     global gamenum
-    games = [f'연어봇 - {prefix}도움 입력!', f'{len(client.guilds)}개의 서버와 함께', f'{len(client.users)}명의 사용자와 함께']
-    await client.change_presence(status=discord.Status.online, activity=discord.Game(games[gamenum]))
-    if gamenum == len(games) - 1:
-        gamenum = 0
-    else:
-        gamenum += 1
-client.invoke
+    try:
+        games = [f'연어봇 - {prefix}도움 입력!', f'{len(client.guilds)}개의 서버와 함께', f'{len(client.users)}명의 사용자와 함께']
+        await client.change_presence(status=discord.Status.online, activity=discord.Game(games[gamenum]))
+        if gamenum == len(games) - 1:
+            gamenum = 0
+        else:
+            gamenum += 1
+    except:
+        errlogger.error(traceback.format_exc())
+
 @client.event
 async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
@@ -188,13 +228,19 @@ async def on_error(event, *args, **kwargs):
     errlogger.error(errstr)
 
 @client.event
-async def on_command_error(ctx: commands.Context, error):
+async def on_command_error(ctx: commands.Context, error: Exception):
+    allerrs = (type(error), type(error.__cause__))
     if hasattr(ctx.command, 'on_error'):
         return
+    elif commands.errors.MissingRequiredArgument in allerrs:
+        pass
     elif isinstance(error, errors.NotRegistered):
         await ctx.send(f'등록되지 않은 사용자입니다! `{prefix}등록` 명령으로 등록해주세요!')
     elif isinstance(error, errors.NotMaster):
         await ctx.send(f'마스터 사용자가 아닙니다. 관리자만 사용 가능합니다.')
+    elif errors.NotValidParam in allerrs:
+        embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {str(error.__cause__)}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
+        await ctx.send(embed=embed)
     elif isinstance(error, commands.errors.CommandInvokeError) and 'In embed.description: Must be 2048 or fewer in length.' in str(error):
         embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어(2000자 이상) 전송에 실패했습니다.', color=color['error'])
         await ctx.send(embed=embed)
@@ -214,7 +260,6 @@ async def on_command_error(ctx: commands.Context, error):
         embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```\n오류가 기록되었습니다. 나중에 개발자가 확인하고 처리하게 됩니다.', color=color['error'])
         await ctx.send(embed=embed)
 
-# Salmon Commands
 logger.info('봇 시작 준비 완료.')
 
 client.add_check(check.notbot)
@@ -223,9 +268,14 @@ client.add_data('color', color)
 client.add_data('emojictrl', emj)
 client.add_data('check', check)
 client.add_data('msglog', msglog)
+client.add_data('errlogger', errlogger)
 client.add_data('errors', errors)
 client.add_data('cur', cur)
+client.add_data('dbcmd', dbcmd)
+client.add_data('ping', None)
+client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds'])
+client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []
 for ext in list(filter(lambda x: x.endswith('.py'), os.listdir('./exts'))):

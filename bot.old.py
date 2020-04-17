@@ -1,4 +1,5 @@
 # -*-coding: utf-8-*-
+# pylint: disable=all
 
 import discord
 from discord.ext import tasks, commands

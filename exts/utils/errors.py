@@ -14,3 +14,9 @@ class SentByBotUser(Exception):
 
 class LockedExtensionUnloading(Exception):
     pass
+
+class ArpaIsGenius(Exception):
+    pass
+
+class NotValidParam(Exception):
+    pass

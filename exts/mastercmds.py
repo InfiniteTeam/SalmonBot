@@ -48,7 +48,10 @@ class Mastercmds(commands.Cog):
 
     @commands.command(name='hawait')
     async def _hawait(self, ctx: commands.Context, *, arg):
-        await eval(arg)
+        try:
+            await eval(arg)
+        except:
+            await ctx.send(embed=discord.Embed(title='❌ 오류', color=self.color['error']))
 
     @commands.command(name='noti')
     async def _noti(self, ctx: commands.Context, *, noti):
@@ -61,7 +64,7 @@ class Mastercmds(commands.Cog):
         guild_ids = list(map(lambda one: one.id, guilds))
 
         start = time.time()
-        embed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['salmon'])
+        embed = discord.Embed(title='📢 공지 전송', description=f'전체 `{len(self.client.guilds)}`개 서버 중 `{len(guilds)}`개 서버에 전송합니다.', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         rst = {'suc': 0, 'exc': 0}
         logstr = ''
         embed.add_field(name='성공', value='0 서버')
@@ -88,11 +91,36 @@ class Mastercmds(commands.Cog):
                 await notimsg.edit(embed=embed)
         end = time.time()
         alltime = math.trunc(end - start)
-        embed = discord.Embed(title=f'{self.emj.get("check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['salmon'])
+        embed = discord.Embed(title=f'{self.emj.get("check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         logfile = discord.File(fp=io.StringIO(logstr), filename='notilog.log')
         await ctx.send(embed=embed)
         await ctx.send(file=logfile)
 
+    @commands.command(name='boom')
+    async def _errortest(self, ctx: commands.Context):
+        raise self.errors.ArpaIsGenius('알파는 천재입니다.')
+
+    @commands.command(name='daconbabo')
+    async def _daconbabo(self, ctx: commands.Context):
+        await ctx.send(self.emj.get('daconbabo'))
+
+    @commands.command(name='log')
+    async def _log(self, ctx: commands.Context, arg):
+        if arg.lower() == 'salmon':
+            with open('./logs/salmon/salmon.log', 'rb') as logfile:
+                f = discord.File(fp=logfile, filename='salmon.log')
+            await ctx.send(file=f)
+
+    @commands.command(name='sysexec')
+    async def _dbcmd(self, ctx: commands.Context, where, *, cmd):
+        if where.lower() == 'dsv':
+            dbcmd = self.client.get_data('dbcmd')
+            rst = await dbcmd(cmd)
+            out = f'📥INPUT: ```\n{cmd}```\n📤OUTPUT: ```\n{rst}```'
+            embed=discord.Embed(title='**💬 AWAIT**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=out)
+            await ctx.send(embed=embed)
+        else:
+            raise self.errors.NotValidParam(where)
 
 def setup(client):
     cog = Mastercmds(client)

@@ -15,3 +15,6 @@ class Msglog:
         authoridstr = '[UserID:] ' + str(ctx.author.id)
         logstr = ', '.join([chtypestr, guildidstr, channelidstr, authoridstr])
         self.logger.info(logstr)
+
+    def print(self, msg, *args, **kwargs):
+        self.logger.info(msg, *args, **kwargs)
