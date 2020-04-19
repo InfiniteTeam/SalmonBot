@@ -4,23 +4,23 @@ import datetime
 import time
 import math
 import io
+from exts.utils.basecog import BaseCog
+import traceback
 
-class Mastercmds(commands.Cog):
+class Mastercmds(BaseCog):
     def __init__(self, client):
-        self.client = client
-        self.color = client.get_data('color')
-        self.emj = client.get_data('emojictrl')
-        self.msglog = client.get_data('msglog')
-        self.errors = client.get_data('errors')
+        super().__init__(client)
+        for cmd in self.get_commands():
+            cmd.add_check(client.get_data('check').master)
 
     @commands.command(name='eval')
     async def _eval(self, ctx: commands.Context, *, arg):
         try:
             rst = eval(arg)
-        except Exception as ex:
-            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{ex}```\n{self.emj.get("cross")} ERROR'
+        except:
+            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
         else:
-            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get("check")} SUCCESS'
+            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
         embed=discord.Embed(title='**💬 EVAL**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -28,10 +28,10 @@ class Mastercmds(commands.Cog):
     async def _exec(self, ctx: commands.Context, *, arg):
         try:
             rst = exec(arg)
-        except Exception as ex:
-            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{ex}```\n{self.emj.get("cross")} ERROR'
+        except:
+            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
         else:
-            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get("check")} SUCCESS'
+            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
         embed=discord.Embed(title='**💬 EXEC**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -39,10 +39,10 @@ class Mastercmds(commands.Cog):
     async def _await(self, ctx: commands.Context, *, arg):
         try:
             rst = await eval(arg)
-        except Exception as ex:
-            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{ex}```\n{self.emj.get("cross")} ERROR'
+        except:
+            evalout = f'📥INPUT: ```python\n{arg}```\n💥EXCEPT: ```python\n{traceback.format_exc()}```\n{self.emj.get(ctx, "cross")} ERROR'
         else:
-            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get("check")} SUCCESS'
+            evalout = f'📥INPUT: ```python\n{arg}```\n📤OUTPUT: ```python\n{rst}```\n{self.emj.get(ctx, "check")} SUCCESS'
         embed=discord.Embed(title='**💬 AWAIT**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=evalout)
         await ctx.send(embed=embed)
 
@@ -55,9 +55,8 @@ class Mastercmds(commands.Cog):
 
     @commands.command(name='noti')
     async def _noti(self, ctx: commands.Context, *, noti):
-        cur = self.client.get_data('cur')
-        cur.execute('select * from serverdata where noticechannel is not NULL')
-        guild_dbs = cur.fetchall()
+        self.cur.execute('select * from serverdata where noticechannel is not NULL')
+        guild_dbs = self.cur.fetchall()
         guild_ids = list(map(lambda one: one['id'], guild_dbs))
         guilds = list(map(lambda one: self.client.get_guild(one), guild_ids))
         guilds = list(filter(bool, guilds))
@@ -91,7 +90,7 @@ class Mastercmds(commands.Cog):
                 await notimsg.edit(embed=embed)
         end = time.time()
         alltime = math.trunc(end - start)
-        embed = discord.Embed(title=f'{self.emj.get("check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
+        embed = discord.Embed(title=f'{self.emj.get(ctx, "check")} 공지 전송을 완료했습니다!', description='자세한 내용은 로그 파일을 참조하세요.', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         logfile = discord.File(fp=io.StringIO(logstr), filename='notilog.log')
         await ctx.send(embed=embed)
         await ctx.send(file=logfile)
@@ -102,7 +101,7 @@ class Mastercmds(commands.Cog):
 
     @commands.command(name='daconbabo')
     async def _daconbabo(self, ctx: commands.Context):
-        await ctx.send(self.emj.get('daconbabo'))
+        await ctx.send(self.emj.get(ctx, 'daconbabo'))
 
     @commands.command(name='log')
     async def _log(self, ctx: commands.Context, arg):
@@ -124,6 +123,4 @@ class Mastercmds(commands.Cog):
 
 def setup(client):
     cog = Mastercmds(client)
-    for cmd in cog.get_commands():
-        cmd.add_check(client.get_data('check').master)
     client.add_cog(cog)

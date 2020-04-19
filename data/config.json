@@ -1,6 +1,7 @@
 {
     "botName": "연어봇",
     "prefix": "%",
+    "betaprefix": "$",
     "activity": "연어봇 - %도움",
     "defaultStatus": "online",
     "inspection": false,

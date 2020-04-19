@@ -23,7 +23,7 @@ import sys
 import traceback
 import itertools
 from iftext import pulse
-from exts.utils import checks, errors, emojictrl, msglogger
+from exts.utils import checks, errors, emojictrl, msglogger, permutil
 
 # Local Data Load
 with open('./data/config.json', encoding='utf-8') as config_file:
@@ -118,6 +118,8 @@ elif platform.system() == 'Linux':
             openapi = json.load(openapi_file)
 
 prefix = config['prefix']
+if config['betamode']:
+    prefix = config['betaprefix']
 activity = config['activity']
 status = config['defaultStatus']
 boticon = config['botIconUrl']
@@ -137,11 +139,15 @@ async def dbcmd(cmd):
     return ''.join(lines)
 
 # DB Connect
+dbkey = 'default'
+if config['betamode']:
+    dbkey = 'beta'
+
 db = pymysql.connect(
-    host=dbac['host'],
-    user=dbac['dbUser'],
-    password=dbac['dbPassword'],
-    db=dbac['dbName'],
+    host=dbac[dbkey]['host'],
+    user=dbac[dbkey]['dbUser'],
+    password=dbac[dbkey]['dbPassword'],
+    db=dbac[dbkey]['dbName'],
     charset='utf8',
     autocommit=True
 )
@@ -164,6 +170,7 @@ gamenum = 0
 async def on_ready():
     logger.info(f'로그인: {client.user.id}')
     logger.info('백그라운드 루프를 시작합니다.')
+    await client.change_presence(status=discord.Status.online)
     presence_loop.start()
     pingloop.start()
     dbloop.start()
@@ -195,25 +202,23 @@ async def pingloop():
     except:
         errlogger.error(traceback.format_exc())
 
-
 @tasks.loop(seconds=5)
 async def dbloop():
     global cur
     try:
         db.ping(reconnect=False)
     except:
-        traceback.print_exc()
         errlogger.warning('DB CONNECTION CLOSED. RECONNECTING...')
         db.ping(reconnect=True)
         errlogger.info('DB RECONNECT DONE.')
 
-@tasks.loop(seconds=5)
+@tasks.loop(seconds=7)
 async def presence_loop():
     global gamenum
     try:
         games = [f'연어봇 - {prefix}도움 입력!', f'{len(client.guilds)}개의 서버와 함께', f'{len(client.users)}명의 사용자와 함께']
-        await client.change_presence(status=discord.Status.online, activity=discord.Game(games[gamenum]))
-        if gamenum == len(games) - 1:
+        await client.change_presence(activity=discord.Game(games[gamenum]))
+        if gamenum == len(games)-1:
             gamenum = 0
         else:
             gamenum += 1
@@ -225,56 +230,84 @@ async def on_error(event, *args, **kwargs):
     ignoreexc = [discord.http.NotFound]
     excinfo = sys.exc_info()
     errstr = f'{"".join(traceback.format_tb(excinfo[2]))}{excinfo[0].__name__}: {excinfo[1]}'
-    errlogger.error(errstr)
+    errlogger.error('\n========== sERROR ==========\n' + errstr + '\n========== sERREND ==========')
 
 @client.event
 async def on_command_error(ctx: commands.Context, error: Exception):
     allerrs = (type(error), type(error.__cause__))
+    tb = traceback.format_exception(type(error), error, error.__traceback__)
+    err = []
+    for line in tb:
+        err.append(line.rstrip())
+    errstr = '\n'.join(err)
     if hasattr(ctx.command, 'on_error'):
         return
     elif commands.errors.MissingRequiredArgument in allerrs:
-        pass
+        return
     elif isinstance(error, errors.NotRegistered):
         await ctx.send(f'등록되지 않은 사용자입니다! `{prefix}등록` 명령으로 등록해주세요!')
+        msglog.log(ctx, '[미등록 사용자]')
+        return
     elif isinstance(error, errors.NotMaster):
         await ctx.send(f'마스터 사용자가 아닙니다. 관리자만 사용 가능합니다.')
+        msglog.log(ctx, '[마스터가 아님]')
+        return
     elif errors.NotValidParam in allerrs:
-        embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {str(error.__cause__)}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
+        embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {str(error.__cause__)}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
-    elif isinstance(error, commands.errors.CommandInvokeError) and 'In embed.description: Must be 2048 or fewer in length.' in str(error):
-        embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어(2000자 이상) 전송에 실패했습니다.', color=color['error'])
-        await ctx.send(embed=embed)
+        msglog.log(ctx, '[존재하지 않는 명령 옵션]')
+        return
     elif isinstance(error, commands.errors.CommandNotFound):
-        embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'])
+        embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
+        msglog.log(ctx, '[존재하지 않는 명령]')
+        return
     elif isinstance(error, errors.SentByBotUser):
-        pass
-    else:
-        # traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-        tb = traceback.format_exception(type(error), error, error.__traceback__)
-        err = []
-        for line in tb:
-            err.append(line.rstrip())
-        errstr = '\n'.join(err)
-        errlogger.error(errstr)
-        embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```\n오류가 기록되었습니다. 나중에 개발자가 확인하고 처리하게 됩니다.', color=color['error'])
+        return
+    elif isinstance(error, (commands.errors.CheckFailure, commands.errors.MissingPermissions)):
+        perms = [permutil.format_perm_by_name(perm) for perm in error.missing_perms]
+        embed = discord.Embed(title='⛔ 멤버 권한 부족!', description=f'{ctx.author.mention}, 이 명령어를 사용하려면 다음과 같은 길드 권한이 필요합니다!\n`' + '`, `'.join(perms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
+        msglog.log(ctx, '[멤버 권한 부족]')
+        return
+    elif isinstance(error.__cause__, discord.HTTPException):
+        if error.__cause__.code == 50013:
+            missings = permutil.find_missing_perms_by_tbstr(errstr)
+            fmtperms = [permutil.format_perm_by_name(perm) for perm in missings]
+            embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
+            await ctx.send(embed=embed)
+            msglog.log(ctx, '[봇 권한 부족]')
+            return
+        elif 'Must' in error.__cause__.text and 'length' in error.__cause__.text:
+            embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어 전송에 실패했습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+            await ctx.send(embed=embed)
+            msglog.log(ctx, '[너무 긴 메시지 전송 시도]')
+            return
+        else:
+            await ctx.send('오류 코드: ' + str(error.__cause__.code))
+    
+    errlogger.error('\n========== CMDERROR ==========\n' + errstr + '\n========== CMDERREND ==========')
+    embed = discord.Embed(title='❌ 오류!', description=f'무언가 오류가 발생했습니다!\n```python\n{errstr}```\n오류가 기록되었습니다. 나중에 개발자가 확인하고 처리하게 됩니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    await ctx.send(embed=embed)
+    msglog.log(ctx, '[커맨드 오류]')
 
 logger.info('봇 시작 준비 완료.')
 
 client.add_check(check.notbot)
 
+client.add_data('config', config)
 client.add_data('color', color)
 client.add_data('emojictrl', emj)
 client.add_data('check', check)
 client.add_data('msglog', msglog)
 client.add_data('errlogger', errlogger)
+client.add_data('logger', logger)
 client.add_data('errors', errors)
 client.add_data('cur', cur)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
-client.add_data('lockedexts', ['exts.basecmds'])
+client.add_data('lockedexts', ['exts.basecmds', 'exts.event'])
 client.add_data('start', datetime.datetime.now())
 
 client.datas['allexts'] = []

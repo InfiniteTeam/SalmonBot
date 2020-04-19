@@ -2,14 +2,13 @@ import discord
 from discord.ext import commands
 import asyncio
 import datetime
+from exts.utils.basecog import BaseCog
 
-class BaseCmds(commands.Cog):
+class BaseCmds(BaseCog):
     def __init__(self, client):
-        self.client = client
-        self.color = client.get_data('color')
-        self.emj = client.get_data('emojictrl')
-        self.msglog = client.get_data('msglog')
-        self.errors = client.get_data('errors')
+        super().__init__(client)
+        for cmd in self.get_commands():
+            cmd.add_check(client.get_data('check').master)
 
     @commands.group(name='ext')
     async def _ext(self, ctx: commands.Context):
@@ -22,9 +21,9 @@ class BaseCmds(commands.Cog):
             if oneext == __name__:
                 allexts += f'🔐 {oneext}\n'
             elif oneext in self.client.extensions:
-                allexts += f'{self.emj.get("check")} {oneext}\n'
+                allexts += f'{self.emj.get(ctx, "check")} {oneext}\n'
             else:
-                allexts += f'{self.emj.get("cross")} {oneext}\n'
+                allexts += f'{self.emj.get(ctx, "cross")} {oneext}\n'
         embed = discord.Embed(title=f'🔌 전체 확장 목록', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=
             f"""\
                 총 {len(self.client.get_data('allexts'))}개 중 {len(self.client.extensions)}개 로드됨.
@@ -40,7 +39,7 @@ class BaseCmds(commands.Cog):
         if (not names) or ('*' in names):
             for onename in reloads:
                 self.client.reload_extension(onename)
-            embed = discord.Embed(description=f'**{self.emj.get("check")} 활성된 모든 확장을 리로드했습니다: `{", ".join(reloads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+            embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 활성된 모든 확장을 리로드했습니다: `{", ".join(reloads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
             await ctx.send(embed=embed)
             self.msglog.log(ctx, '[모든 확장 리로드 완료]')
         else:
@@ -55,7 +54,7 @@ class BaseCmds(commands.Cog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[로드되지 않았거나 존재하지 않는 확장]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get("check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 리로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 리로드 완료]')
         
@@ -75,7 +74,7 @@ class BaseCmds(commands.Cog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[모든 확장이 이미 로드됨]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(loads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 로드를 완료했습니다: `{", ".join(loads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 로드 완료]')
         else:
@@ -97,7 +96,7 @@ class BaseCmds(commands.Cog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[이미 로드된 확장]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get("check")} 확장 로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 로드 완료]')
 
@@ -116,7 +115,7 @@ class BaseCmds(commands.Cog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[로드된 확장이 전혀 없음]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get("check")} 확장 언로드를 완료했습니다: `{", ".join(unloads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(unloads)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[열린 모든 확장 언로드 완료]')
         else:
@@ -139,7 +138,7 @@ class BaseCmds(commands.Cog):
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[잠긴 확장 로드 시도]')
             else:
-                embed = discord.Embed(description=f'**{self.emj.get("check")} 확장 언로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
+                embed = discord.Embed(description=f'**{self.emj.get(ctx, "check")} 확장 언로드를 완료했습니다: `{", ".join(names)}`**', color=self.color['info'], timestamp=datetime.datetime.utcnow())
                 await ctx.send(embed=embed)
                 self.msglog.log(ctx, '[확장 언로드 완료]')
 
@@ -147,8 +146,10 @@ class BaseCmds(commands.Cog):
     async def _ext_reload_wrapper(self, ctx: commands.Context, *names):
         await self._ext_reload(ctx, *names)
 
+    @commands.command(name='long')
+    async def _long(self, ctx: commands.Context, *names):
+        await ctx.send('d'*20000)
+
 def setup(client):
     cog = BaseCmds(client)
-    for cmd in cog.get_commands():
-        cmd.add_check(client.get_data('check').master)
     client.add_cog(cog)

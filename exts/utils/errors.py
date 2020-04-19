@@ -9,7 +9,7 @@ class NotMaster(commands.CheckFailure):
 class GlobaldataAlreadyAdded(Exception):
     pass
 
-class SentByBotUser(Exception):
+class SentByBotUser(commands.CheckFailure):
     pass
 
 class LockedExtensionUnloading(Exception):
@@ -19,4 +19,7 @@ class ArpaIsGenius(Exception):
     pass
 
 class NotValidParam(Exception):
+    pass
+
+class NotGuildChannel(commands.CheckFailure):
     pass

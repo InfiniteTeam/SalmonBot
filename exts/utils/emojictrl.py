@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 
 class Emoji:
     def __init__(self, client: discord.Client, guild: int, emojis: dict):
@@ -6,8 +7,15 @@ class Emoji:
         self.emojis = emojis
         self.client = client
 
-    def get(self, name):
-        return self.client.get_emoji(self.emojis[name])
+    def get(self, ctx: commands.Context, name: str):
+        if ctx.channel.permissions_for(ctx.guild.get_member(self.client.user.id)).external_emojis:
+            return self.client.get_emoji(self.emojis[name]['default'])
+        else:
+            try:
+                rt = self.emojis[name]['replace']
+            except KeyError:
+                rt = ''
+            return rt
 
     def getid(self, name):
         return self.emojis[name]
