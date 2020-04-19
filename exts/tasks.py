@@ -3,6 +3,8 @@ from discord.ext import commands, tasks
 from exts.utils.basecog import BaseCog
 import traceback
 
+# pylint: disable=no-member
+
 class Tasks(BaseCog):
     def __init__(self, client):
         super().__init__(client)

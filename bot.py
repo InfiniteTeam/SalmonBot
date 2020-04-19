@@ -184,21 +184,26 @@ async def on_ready():
 @tasks.loop(seconds=5)
 async def pingloop():
     try:
-        ping = round(client.latency*100000)/100
+        ping = int(client.latency*100000)/100
         if ping <= 100:
             pinglevel = '🔵 매우좋음'
-        elif ping > 100 and ping <= 250:
+        elif ping <= 300:
             pinglevel = '🟢 양호함'
-        elif ping > 250 and ping <= 400:
+        elif ping <= 500:
             pinglevel = '🟡 보통'
-        elif ping > 400 and ping <= 550:
+        elif ping <= 700:
             pinglevel = '🔴 나쁨'
-        elif ping > 550:
-            pinglevel = '⚫ 매우나쁨'
+        else:
+            pinglevel = '⚪ 매우나쁨'
         client.set_data('ping', (ping, pinglevel))
         pinglogger.info(f'{ping}ms')
         pinglogger.info(f'DB_OPEN: {db.open}')
         pinglogger.info(f'CLIENT_CONNECTED: {not client.is_closed()}')
+        guildshards = {}
+        for one in client.latencies:
+            guildshards[one[0]] = tuple(filter(lambda guild: guild.shard_id == one[0], client.guilds))
+        client.set_data('guildshards', guildshards)
+        client.get_data('guildshards')
     except:
         errlogger.error(traceback.format_exc())
 
@@ -249,8 +254,6 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         msglog.log(ctx, '[미등록 사용자]')
         return
     elif isinstance(error, errors.NotMaster):
-        await ctx.send(f'마스터 사용자가 아닙니다. 관리자만 사용 가능합니다.')
-        msglog.log(ctx, '[마스터가 아님]')
         return
     elif errors.NotValidParam in allerrs:
         embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {str(error.__cause__)}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
@@ -306,6 +309,7 @@ client.add_data('errors', errors)
 client.add_data('cur', cur)
 client.add_data('dbcmd', dbcmd)
 client.add_data('ping', None)
+client.add_data('guildshards', None)
 client.add_data('version_str', version['versionPrefix'] + version['versionNum'])
 client.add_data('lockedexts', ['exts.basecmds', 'exts.event'])
 client.add_data('start', datetime.datetime.now())
