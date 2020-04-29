@@ -134,7 +134,7 @@ sshclient.set_missing_host_key_policy(paramiko.AutoAddPolicy)
 sshclient.connect(ssh['host'], username=ssh['user'], password=ssh['password'], port=ssh['port'])
 
 async def dbcmd(cmd):
-    stdin, stdout, stderr = sshclient.exec_command(cmd)
+    stdin, stdout, stderr = await client.loop.run_in_executor(None, sshclient.exec_command, cmd)
     lines = stdout.readlines()
     return ''.join(lines)
 
@@ -255,8 +255,8 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         return
     elif isinstance(error, errors.NotMaster):
         return
-    elif errors.NotValidParam in allerrs:
-        embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {str(error.__cause__)}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+    elif errors.ParamsNotExist in allerrs:
+        embed = discord.Embed(title=f'❓ 존재하지 않는 명령 옵션입니다: {", ".join(str(error.__cause__.param))}', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         msglog.log(ctx, '[존재하지 않는 명령 옵션]')
         return
@@ -266,6 +266,11 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         msglog.log(ctx, '[존재하지 않는 명령]')
         return
     elif isinstance(error, errors.SentByBotUser):
+        return
+    elif isinstance(error, commands.errors.NoPrivateMessage):
+        embed = discord.Embed(title='⛔ 길드 전용 명령어', description='이 명령어는 길드 채널에서만 사용할 수 있습니다!', color=color['error'], timestamp=datetime.datetime.utcnow())
+        await ctx.send(embed=embed)
+        msglog.log(ctx, '[길드 전용 명령]')
         return
     elif isinstance(error, (commands.errors.CheckFailure, commands.errors.MissingPermissions)):
         perms = [permutil.format_perm_by_name(perm) for perm in error.missing_perms]
@@ -281,7 +286,7 @@ async def on_command_error(ctx: commands.Context, error: Exception):
             await ctx.send(embed=embed)
             msglog.log(ctx, '[봇 권한 부족]')
             return
-        elif 'Must' in error.__cause__.text and 'length' in error.__cause__.text:
+        elif error.__cause__.code == 50035:
             embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어 전송에 실패했습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())
             await ctx.send(embed=embed)
             msglog.log(ctx, '[너무 긴 메시지 전송 시도]')
@@ -300,6 +305,7 @@ client.add_check(check.notbot)
 
 client.add_data('config', config)
 client.add_data('color', color)
+client.add_data('openapi', openapi)
 client.add_data('emojictrl', emj)
 client.add_data('check', check)
 client.add_data('msglog', msglog)

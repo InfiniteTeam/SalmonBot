@@ -35,14 +35,3 @@ class Checks:
 
     def is_notbot(self):
         return commands.check(self.notbot)
-
-    async def only_guild(self, ctx: commands.Context):
-        if ctx.guild:
-            return True
-        raise self.error.NotGuildChannel('길드 채널이 아닙니다: {}'.format(ctx.channel.id))
-
-    def is_guild(self):
-        return commands.check(self.only_guild)
-
-    
-

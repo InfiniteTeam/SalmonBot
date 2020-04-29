@@ -9,18 +9,16 @@ class Salmoncmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         for cmd in self.get_commands():
-            if cmd.name != 'register':
-                cmd.add_check(client.get_data('check').registered)
-            if cmd.name == 'notice':
-                cmd.add_check(client.get_data('check').only_guild)
+            if cmd.name != '등록':
+                cmd.add_check(self.check.registered)
 
-    @commands.command(name='help', aliases=['도움'])
+    @commands.command(name='도움')
     async def _help(self, ctx: commands.Context):
         embed = discord.Embed(title='📃 연어봇 전체 명령어', description='**현재 연어봇 리메이크중입니다! 일부 명령어가 동작하지 않을 수 있습니다.\n[전체 명령어 보기](https://help.infiniteteam.me/salmonbot)**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[도움]')
 
-    @commands.command(name='info', aliases=['정보'])
+    @commands.command(name='정보')
     async def _info(self, ctx: commands.Context):
         uptimenow = re.findall('\d+', str(datetime.datetime.now() - self.client.get_data('start')))
         uptimestr = ''
@@ -41,22 +39,23 @@ class Salmoncmds(BaseCog):
             if int(uptimenow[3]) > 0:
                 uptimestr += f'{int(uptimenow[3])}초 '
 
-        embed=discord.Embed(title='🏷 연어봇 정보', description=f'연어봇 버전: {self.client.get_data("version_str")}\n실행 시간: {uptimestr}', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
+        embed=discord.Embed(title='🏷 연어봇 정보', description=f'연어봇 버전: {self.client.get_data("version_str")}\n실행 시간: {uptimestr}\nDiscord.py 버전: {discord.__version__}', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[정보]')
 
-    @commands.command(name='ping', aliases=['핑'])
+    @commands.command(name='핑')
     async def _ping(self, ctx: commands.Context):
         embed=discord.Embed(title='🏓 퐁!', description=f'**디스코드 지연시간: **{self.client.get_data("ping")[0]}ms - {self.client.get_data("ping")[1]}\n\n디스코드 지연시간은 디스코드 웹소켓 프로토콜의 지연 시간(latency)을 뜻합니다.', color=self.color['salmon'], timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=embed)
         self.msglog.log(ctx, '[핑]')
 
-    @commands.command(name='shard-id', aliases=['샤드'])
+    @commands.command(name='샤드')
     async def _shard_id(self, ctx: commands.Context):
         await ctx.send(embed=discord.Embed(description=f'**이 서버의 샤드 아이디는 `{ctx.guild.shard_id}`입니다.**\n현재 총 {self.client.get_data("guildshards").__len__()} 개의 샤드가 활성 상태입니다.', color=self.color['info'], timestamp=datetime.datetime.utcnow()))
         self.msglog.log(ctx, '[샤드]')
 
-    @commands.command(name='notice', aliases=['공지채널'])
+    @commands.command(name='공지채널')
+    @commands.guild_only()
     @commands.has_guild_permissions(administrator=True)
     async def _notice(self, ctx: commands.Context, *mention):
         mention = ctx.message.channel_mentions
@@ -67,7 +66,7 @@ class Salmoncmds(BaseCog):
         current_id = self.cur.execute('select * from serverdata where id=%s', ctx.guild.id)
         if current_id:
             ch = ctx.guild.get_channel(self.cur.fetchone()['noticechannel'])
-            if notich == ctx.channel:
+            if notich == ch:
                 await ctx.send(embed=discord.Embed(title=f'❓ 이미 이 채널이 공지채널로 설정되어 있습니다!', color=self.color['error']))
                 self.msglog.log(ctx, '[공지채널: 이미 설정된 채널]')
             elif ch:
@@ -96,7 +95,7 @@ class Salmoncmds(BaseCog):
                         await ctx.send(embed=discord.Embed(title=f'❌ 취소되었습니다.', color=self.color['error']))
                         self.msglog.log(ctx, '[공지채널: 취소됨]')
 
-    @commands.command(name='register', aliases=['등록'])
+    @commands.command(name='등록')
     async def _register(self, ctx: commands.Context):
         if self.cur.execute('select * from userdata where id=%s', ctx.author.id):
             await ctx.send(embed=discord.Embed(title=f'{self.emj.get(ctx, "check")} 이미 등록된 사용자입니다!', color=self.color['info']))

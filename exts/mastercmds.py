@@ -11,7 +11,7 @@ class Mastercmds(BaseCog):
     def __init__(self, client):
         super().__init__(client)
         for cmd in self.get_commands():
-            cmd.add_check(client.get_data('check').master)
+            cmd.add_check(self.check.master)
 
     @commands.command(name='eval')
     async def _eval(self, ctx: commands.Context, *, arg):
@@ -105,10 +105,20 @@ class Mastercmds(BaseCog):
 
     @commands.command(name='log')
     async def _log(self, ctx: commands.Context, arg):
-        if arg.lower() == 'salmon':
-            with open('./logs/salmon/salmon.log', 'rb') as logfile:
-                f = discord.File(fp=logfile, filename='salmon.log')
-            await ctx.send(file=f)
+        async with ctx.channel.typing():
+            name = arg.lower()
+            if name == 'salmon':
+                with open('./logs/salmon/salmon.log', 'rb') as logfile:
+                    f = discord.File(fp=logfile, filename='salmon.log')
+                await ctx.send(file=f)
+            elif name == 'ping':
+                with open('./logs/ping/ping.log', 'rb') as logfile:
+                    f = discord.File(fp=logfile, filename='ping.log')
+                await ctx.send(file=f)
+            elif name == 'error':
+                with open('./logs/error/error.log', 'rb') as logfile:
+                    f = discord.File(fp=logfile, filename='error.log')
+                await ctx.send(file=f)
 
     @commands.command(name='sysexec')
     async def _dbcmd(self, ctx: commands.Context, where, *, cmd):
@@ -119,7 +129,7 @@ class Mastercmds(BaseCog):
             embed=discord.Embed(title='**💬 AWAIT**', color=self.color['salmon'], timestamp=datetime.datetime.utcnow(), description=out)
             await ctx.send(embed=embed)
         else:
-            raise self.errors.NotValidParam(where)
+            raise self.errors.ParamsNotExist(where)
 
 def setup(client):
     cog = Mastercmds(client)

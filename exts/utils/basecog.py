@@ -4,6 +4,7 @@ class BaseCog(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.color = client.get_data('color')
+        self.openapi = client.get_data('openapi')
         self.emj = client.get_data('emojictrl')
         self.msglog = client.get_data('msglog')
         self.logger = client.get_data('logger')
