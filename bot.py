@@ -181,20 +181,15 @@ async def on_ready():
         pass
         # pulse.send_pulse.start(client=client, user='salmonbot', token=token.strip(), host='arpa.kro.kr', version=version['versionPrefix'] + version['versionNum'])
 
-@tasks.loop(seconds=5)
+@tasks.loop(seconds=5) #이 코드는 트펙의 것(?)
 async def pingloop():
     try:
-        ping = int(client.latency*100000)/100
-        if ping <= 100:
-            pinglevel = '🔵 매우좋음'
-        elif ping <= 300:
-            pinglevel = '🟢 양호함'
-        elif ping <= 500:
-            pinglevel = '🟡 보통'
-        elif ping <= 700:
-            pinglevel = '🔴 나쁨'
-        else:
-            pinglevel = '⚪ 매우나쁨'
+        ping = round(client.latency*1000,2)
+        if ping <= 100: pinglevel = '🔵 매우좋음'
+        elif ping <= 250: pinglevel = '🟢 양호함'
+        elif ping <= 400: pinglevel = '🟡 보통'
+        elif ping <= 150: pinglevel = '🔴 나쁨'
+        else: pinglevel = '⚪ 매우나쁨'
         client.set_data('ping', (ping, pinglevel))
         pinglogger.info(f'{ping}ms')
         pinglogger.info(f'DB_OPEN: {db.open}')
