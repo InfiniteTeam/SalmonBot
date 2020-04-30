@@ -188,7 +188,7 @@ async def pingloop():
         if ping <= 100: pinglevel = '🔵 매우좋음'
         elif ping <= 250: pinglevel = '🟢 양호함'
         elif ping <= 400: pinglevel = '🟡 보통'
-        elif ping <= 150: pinglevel = '🔴 나쁨'
+        elif ping <= 550: pinglevel = '🔴 나쁨'
         else: pinglevel = '⚪ 매우나쁨'
         client.set_data('ping', (ping, pinglevel))
         pinglogger.info(f'{ping}ms')
