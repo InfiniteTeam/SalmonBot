@@ -285,6 +285,7 @@ async def on_command_error(ctx: commands.Context, error: Exception):
             embed = discord.Embed(title='⛔ 봇 권한 부족!', description='이 명령어를 사용하는 데 필요한 봇의 권한이 부족합니다!\n`' + '`, `'.join(fmtperms) + '`', color=color['error'], timestamp=datetime.datetime.utcnow())
             await ctx.send(embed=embed)
             msglog.log(ctx, '[봇 권한 부족]')
+            print(errstr)
             return
         elif error.__cause__.code == 50035:
             embed = discord.Embed(title='❗ 메시지 전송 실패', description='보내려고 하는 메시지가 너무 길어 전송에 실패했습니다.', color=color['error'], timestamp=datetime.datetime.utcnow())

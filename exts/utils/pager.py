@@ -9,19 +9,41 @@ class Pager:
             raise TypeError('페이지당 요소 최대 개수는 반드시 자연수여야합니다.')
         self.__obj = obj
         self.__page = 0
-        self.__pageindexes = list(range(0, len(self.__obj)+1, self.__perpage))
+        self.__pageindexes = list(range(0, len(self.__obj), self.__perpage))
 
-    def next(self):
-        if self.__page < len(self.__pageindexes):
+    def next(self, r=False):
+        if self.__page + 1< len(self.__pageindexes):
             self.__page += 1
-        else:
+        elif r:
             raise StopIteration
 
-    def prev(self):
+    def prev(self, r=False):
         if self.__page > 0:
             self.__page -= 1
-        else:
+        elif r:
             raise StopIteration
+
+    def plus(self, n, r=False, a=True):
+        if self.__page + 1 + n < len(self.__pageindexes):
+            self.__page += n
+        elif a:
+            self.go_end()
+        elif r:
+            raise StopIteration
+
+    def minus(self, n, r=False, a=True):
+        if self.__page - n > 0:
+            self.__page -= n
+        elif a:
+            self.go_first()
+        elif r:
+            raise StopIteration
+
+    def go_first(self):
+        self.__page = 0
+
+    def go_end(self):
+        self.__page = len(self.__pageindexes) - 1
 
     def setpage(self, page):
         if isinstance(page, int) and 0 <= page:
