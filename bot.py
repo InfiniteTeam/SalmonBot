@@ -256,8 +256,8 @@ async def on_command_error(ctx: commands.Context, error: Exception):
         msglog.log(ctx, '[존재하지 않는 명령 옵션]')
         return
     elif isinstance(error, commands.errors.CommandNotFound):
-        embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
-        await ctx.send(embed=embed)
+        # embed = discord.Embed(title='❓ 존재하지 않는 명령어입니다!', description=f'`{prefix}도움` 명령으로 전체 명령어를 확인할 수 있어요.', color=color['error'], timestamp=datetime.datetime.utcnow())
+        # await ctx.send(embed=embed)
         msglog.log(ctx, '[존재하지 않는 명령]')
         return
     elif isinstance(error, errors.SentByBotUser):
