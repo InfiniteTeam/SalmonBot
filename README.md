@@ -27,6 +27,8 @@ To use my code, follow this [Licence](LICENSE)
 
 [<img src="https://cdn.discordapp.com/attachments/632678489144688678/689055297930526744/72da39a2fb24304b.jpg" width="40" height="40" title="COiN(COIN-KR)">](https://github.com/COIN-KR) by COiN, in InfiniteTeam
 
+[<img src="https://cdn.discordapp.com/avatars/467666650183761920/337654b03985ac8bdf1cf7e8449b27d8.png" width="40" height="40" title="TH_PHEC">](https://github.com/gimon0330) by TH_PHEC, in InfiniteTeam
+
 ## OpenAPIs
 <a href="http://developers.naver.com" target="_blank">
     <img src="./openapis/naveropenapi.png" alt="NAVER Open API" width="30%" height="30%"/>
