@@ -109,10 +109,10 @@ class Salmoncmds(BaseCog):
         for em in emjs:
             await msg.add_reaction(em)
         self.msglog.log(ctx, '[등록: 등록하기]')
-        def checkmsg(m):
-            return m.channel == ctx.channel and m.author == ctx.author and m.content == '동의'
+        def check(reaction, user):
+            return user == ctx.author and msg.id == reaction.message.id and str(reaction.emoji) in emjs
         try:
-            msg = await self.client.wait_for('reaction_add', timeout=20.0, check=checkmsg)
+            reaction, user = await self.client.wait_for('reaction_add', timeout=20.0, check=check)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[등록: 시간 초과]')
