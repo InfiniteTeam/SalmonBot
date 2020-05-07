@@ -104,12 +104,15 @@ class Salmoncmds(BaseCog):
         embed = discord.Embed(title='연어봇 등록', description='**연어봇을 이용하기 위한 이용약관 및 개인정보 취급방침입니다. 연어봇을 이용하려면 동의가 필요합니다.**', color=self.color['ask'], timestamp=datetime.datetime.utcnow())
         embed.add_field(name='ㅤ', value='[이용약관](https://www.infiniteteam.me/tos)\n', inline=True)
         embed.add_field(name='ㅤ', value='[개인정보 취급방침](https://www.infiniteteam.me/privacy)\n', inline=True)
-        await ctx.send(content=ctx.author.mention, embed=embed)
+        msg = await ctx.send(content=ctx.author.mention, embed=embed)
+        emjs = ['⭕', '❌']
+        for em in emjs:
+            await msg.add_reaction(em)
         self.msglog.log(ctx, '[등록: 등록하기]')
         def checkmsg(m):
             return m.channel == ctx.channel and m.author == ctx.author and m.content == '동의'
         try:
-            msg = await self.client.wait_for('message', timeout=20.0, check=checkmsg)
+            msg = await self.client.wait_for('reaction_add', timeout=20.0, check=checkmsg)
         except asyncio.TimeoutError:
             await ctx.send(embed=discord.Embed(title='⏰ 시간이 초과되었습니다!', color=self.color['info']))
             self.msglog.log(ctx, '[등록: 시간 초과]')
