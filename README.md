@@ -7,7 +7,7 @@ Everything on the web, in Discord.
 ## Licence
 이 소스코드를 활용하려면 반드시 [라이센스](LICENCE)를 지켜야 합니다.
 
-To use my code, follow this [Licence](LICENSE)
+To use my code, follow this [License](LICENSE)
 
 ## How to Use
 ### Requirements
